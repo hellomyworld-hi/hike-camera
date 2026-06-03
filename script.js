@@ -226,10 +226,15 @@ newVideo.src = videoURL;
 
 newVideo.addEventListener('loadedmetadata', () => {
     alert(
-        'video size: ' +
+        'video: ' +
         newVideo.videoWidth +
-        ' x ' +
-        newVideo.videoHeight
+        'x' +
+        newVideo.videoHeight +
+        '\n' +
+        'box: ' +
+        newSlide.clientWidth +
+        'x' +
+        newSlide.clientHeight
     );
 });
 
