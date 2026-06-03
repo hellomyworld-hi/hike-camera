@@ -145,22 +145,7 @@ async function startCamera() {
             ctx.restore();
             requestAnimationFrame(drawFrame);
         }
-        const ctx = canvas.getContext('2d');
-
-        // 매 프레임마다 캔버스에 그리기
-        function drawFrame() {
-            if (cameraView.paused || cameraView.ended) return;
-            
-            ctx.save();
-            if (currentFacingMode === "user") {
-                ctx.scale(-1, 1);
-                ctx.drawImage(cameraView, -width, 0, width, height);
-            } else {
-                ctx.drawImage(cameraView, 0, 0, width, height);
-            }
-            ctx.restore();
-            requestAnimationFrame(drawFrame);
-        }
+        
         
         // 비디오가 재생될 때 캔버스 드로잉 시작
         cameraView.onplay = drawFrame;
