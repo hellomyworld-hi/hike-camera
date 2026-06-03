@@ -197,26 +197,29 @@ function loadSavedVideos() {
     };
 }
 
-// 화면에 비디오 슬라이드 칸을 생성해주는 함수 (🎨 웹사이트 슬라이드 압축/찌그러짐 완전 해결 버전)
+// 화면에 비디오 슬라이드 칸을 생성해주는 함수 (🎨 원본 비율 유지 + 위아래 Crop 잘라내기 버전)
 function addVideoSlideToUI(blob, altitude, id, recordTime) {
     const videoURL = URL.createObjectURL(blob);
 
     const newSlide = document.createElement('div');
     newSlide.className = 'slide-page';
     
-    // 🌟 넘치는 세로 영상을 칼같이 잘라내기(Cut) 위해 슬라이드 상자에 넘침 숨김 처리 추가
+    // 🌟 [Crop 핵심 1] 박스를 벗어나는 위아래 영상을 시각적으로 완전히 잘라내기(Crop) 위한 설정
     newSlide.style.position = 'relative'; 
     newSlide.style.overflow = 'hidden'; 
+    newSlide.style.display = 'flex';
+    newSlide.style.justifyContent = 'center';
+    newSlide.style.alignItems = 'center';
 
     const newVideo = document.createElement('video');
     newVideo.src = videoURL;
     newVideo.className = 'saved-video';
 
-    // 🌟 [핵심 수정] 영상을 억지로 구겨 넣지 않고, 가로폭을 채운 뒤 넘치는 위아래는 싹둑 쳐내서(Cut) 원본 비율 유지
+    // 🌟 [Crop 핵심 2] 영상을 압축(축소)하지 않고, 박스 종횡비에 맞춰 가득 채운 뒤 넘치는 위아래를 쳐내는 마법의 조합
     newVideo.style.setProperty('width', '100%', 'important');
     newVideo.style.setProperty('height', '100%', 'important');
-    newVideo.style.setProperty('object-fit', 'cover', 'important'); // 찌그러짐 방지 마법의 명령어
-    newVideo.style.setProperty('object-position', 'center', 'important'); // 영상을 상자 정중앙에 정렬
+    newVideo.style.setProperty('object-fit', 'cover', 'important'); // 찌그러짐을 절대 방지하고 비율 유지하며 채움
+    newVideo.style.setProperty('object-position', 'center center', 'important'); // 정중앙을 기준으로 위아래를 똑같이 잘라냄
 
     newVideo.muted = false; 
     newVideo.playsInline = true;
