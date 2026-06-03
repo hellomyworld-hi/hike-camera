@@ -209,10 +209,10 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
     newVideo.src = videoURL;
     newVideo.className = 'saved-video';
 
-    // 🌟 [웹사이트 슬라이드 찌러짐 버그 해결] 영상이 강제 압축되지 않고 위아래가 깔끔히 잘리도록 처리
-    newVideo.style.width = '100%';
-    newVideo.style.height = '100%';
-    newVideo.style.objectFit = 'cover'; 
+    // 🌟 [1번 문제 해결] CSS가 욱여넣으려고 압축(fill)하는 대항마로 '!important'를 선언하여 강제로 Cut(cover) 시킵니다.
+    newVideo.style.setProperty('width', '100%', 'important');
+    newVideo.style.setProperty('height', '100%', 'important');
+    newVideo.style.setProperty('object-fit', 'cover', 'important'); 
 
     newVideo.muted = false; 
     newVideo.playsInline = true;
@@ -375,7 +375,7 @@ function handleSwipe() {
 }
 
 // ==========================================
-// 비디오 캔버스 병합 인코더 시스템 (소리 보강 및 모바일 크롭 완전 수정 완료)
+// 비디오 캔버스 병합 인코더 시스템 (소리 강제 추출 및 자막 좌표 전면 교정)
 // ==========================================
 totalDownloadBtn.addEventListener('click', generateTotalLogVideo);
 
@@ -413,6 +413,26 @@ async function generateTotalLogVideo() {
         const canvasStream = canvas.captureStream(30);
         const encodedChunks = [];
 
+        // 🌟 [3번 문제 해결] 모바일 자동재생 보안 정책 우회용 AudioContext 소리 결합 로직
+        let audioContext, audioDestination, mediaElementSource;
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            audioContext = new AudioContextClass();
+            audioDestination = audioContext.createMediaStreamDestination();
+            mediaElementSource = audioContext.createMediaElementSource(hiddenVideo);
+            
+            // 비디오 소리를 오디오 믹서로 보내고, 최종 녹화 스트림에 강제로 유입시킴
+            mediaElementSource.connect(audioDestination);
+            mediaElementSource.connect(audioContext.destination); // 모니터링용 링크
+            
+            const compiledAudioTrack = audioDestination.stream.getAudioTracks()[0];
+            if (compiledAudioTrack) {
+                canvasStream.addTrack(compiledAudioTrack);
+            }
+        } catch (audioErr) {
+            console.log("웹 오디오 시스템 초기화 우회:", audioErr);
+        }
+
         function getDownloadMimeType() {
             const appleFriendlyTypes = [
                 'video/mp4;codecs=avc1',   
@@ -428,19 +448,6 @@ async function generateTotalLogVideo() {
         }
 
         const downloadMimeType = getDownloadMimeType();
-        
-        try {
-            if (hiddenVideo.captureStream) {
-                const audioTrack = hiddenVideo.captureStream().getAudioTracks()[0];
-                if (audioTrack) canvasStream.addTrack(audioTrack);
-            } else if (hiddenVideo.mozCaptureStream) {
-                const audioTrack = hiddenVideo.mozCaptureStream().getAudioTracks()[0];
-                if (audioTrack) canvasStream.addTrack(audioTrack);
-            }
-        } catch (err) {
-            console.log("오디오 스트림 사전 결합 건너뜀:", err);
-        }
-
         const canvasRecorder = new MediaRecorder(canvasStream, downloadMimeType ? { mimeType: downloadMimeType } : {});
 
         canvasRecorder.ondataavailable = (event) => {
@@ -480,6 +487,8 @@ async function generateTotalLogVideo() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4M7 10l5 5 5-5M12 15V3"/>
                 </svg><span>등산log 다운로드</span>`;
+            
+            if (audioContext) audioContext.close();
         };
 
         canvasRecorder.start();
@@ -494,8 +503,12 @@ async function generateTotalLogVideo() {
                 };
             });
 
+            if (audioContext && audioContext.state === 'suspended') {
+                await audioContext.resume();
+            }
+
             hiddenVideo.volume = 1.0;
-            await hiddenVideo.play().catch(e => console.log("비디오 재생 유저 승인 필요:", e));
+            await hiddenVideo.play().catch(e => console.log("비디오 소리 트랙 활성화 우회 중:", e));
 
             let isCurrentVideoPlaying = true;
             hiddenVideo.onended = () => { isCurrentVideoPlaying = false; };
@@ -509,23 +522,19 @@ async function generateTotalLogVideo() {
                 const videoX = (canvas.width - containerWidth) / 2;
                 const videoY = (canvas.height - containerHeight) / 2;
 
-                // 🌟 [모바일 강제 칼크롭(Cut) 보정 공식 적용]
-                // 메타데이터가 뒤집혀 들어와 세로 영상이 홀쭉하게 찌그러지는 현상을 원천 방어합니다.
                 const rawW = hiddenVideo.videoWidth || 720;
                 const rawH = hiddenVideo.videoHeight || 1280;
                 
                 const realVideoWidth = Math.min(rawW, rawH);
                 const realVideoHeight = Math.max(rawW, rawH);
                 
-                // 가로 너비를 슬라이드 틀에 딱 맞춰 채운 뒤, 세로는 원본 종횡비에 맞춰 위아래로 대폭 확장합니다. (절대 압축되지 않음)
                 const drawWidth = containerWidth;
                 const drawHeight = containerWidth * (realVideoHeight / realVideoWidth);
                 
-                // 삐져나온 위아래를 정중앙 기준 반반씩 날리기 위한 오프셋 조절
                 const offsetX = videoX;
                 const offsetY = videoY - (drawHeight - containerHeight) / 2;
 
-                // 2. 둥근 사각형 클리핑 영역을 생성하고 넘친 위아래 싹둑 잘라내기(Cut)!
+                // 2. 영상 크롭해서 상자 안에 그리기
                 ctx.save();
                 ctx.beginPath();
                 ctx.roundRect(videoX, videoY, containerWidth, containerHeight, 20);
@@ -533,20 +542,28 @@ async function generateTotalLogVideo() {
                 ctx.drawImage(hiddenVideo, offsetX, offsetY, drawWidth, drawHeight);
                 ctx.restore();
 
-                // 3. 시간 자막 그리기
-                ctx.font = "600 20px system-ui, -apple-system, sans-serif";
+                // 🌟 [2번 문제 해결 - 자막 대폭 교정]
+                // 3. 시간 자막 그리기 (좌측 정렬 초기화 후 박스 내 안착, 가독성 확보를 위해 24px로 확대)
+                ctx.save();
+                ctx.font = "600 24px system-ui, -apple-system, sans-serif";
                 ctx.fillStyle = "white";
                 ctx.textAlign = "left";
                 ctx.textBaseline = "top";
                 const displayTime = item.recordTime || "00:00";
-                ctx.fillText(displayTime, videoX + 20, videoY + 20);
+                ctx.fillText(displayTime, videoX + 25, videoY + 25);
+                ctx.restore();
 
-                // 4. 고도 자막 그리기
-                ctx.font = "bold 36px sans-serif";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
+                // 4. 고도 자막 그리기 (우측 쏠림 방지를 위한 타 정렬 차단 및 중앙 완전 일치 계산)
+                ctx.save();
+                ctx.font = "bold 38px sans-serif";
                 ctx.fillStyle = "white";
+                ctx.textAlign = "center";      // 기준 좌표로부터 완벽히 좌우 균등 분배 정렬
+                ctx.textBaseline = "middle";    // 기준 좌표로부터 상하 위아래 정중앙 정렬
+                
+                // canvas.width / 2 = 360px (전체 가로의 딱 절반 중앙점)
+                // videoY + (containerHeight / 2) = 영상 박스의 딱 상하 가운데 지점
                 ctx.fillText(item.altitudeText, canvas.width / 2, videoY + (containerHeight / 2));
+                ctx.restore();
 
                 await new Promise(requestAnimationFrame);
             }
