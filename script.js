@@ -101,35 +101,66 @@ async function startCamera() {
             video: { facingMode: currentFacingMode },
             audio: true
         });
+
+        // 1. 화면 출력용 비디오 태그 설정
         cameraView.srcObject = stream;
-        // 전면카메라 좌우반전 보정
-if (currentFacingMode === "user") {
-    cameraView.style.transform = "scaleX(-1)";
-} else {
-    cameraView.style.transform = "scaleX(1)";
-}
+        
+        // 2. 화면엔 거울처럼 보여주기 (CSS)
+        if (currentFacingMode === "user") {
+            cameraView.style.transform = "scaleX(-1)";
+        } else {
+            cameraView.style.transform = "scaleX(1)";
+        }
+
+        // 3. 녹화용 캔버스 설정
+        const videoTrack = stream.getVideoTracks()[0];
+        const { width, height } = videoTrack.getSettings();
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        // 매 프레임마다 캔버스에 그리기
+        function drawFrame() {
+            if (cameraView.paused || cameraView.ended) return;
+            
+            ctx.save();
+            if (currentFacingMode === "user") {
+                ctx.scale(-1, 1);
+                ctx.drawImage(cameraView, -width, 0, width, height);
+            } else {
+                ctx.drawImage(cameraView, 0, 0, width, height);
+            }
+            ctx.restore();
+            requestAnimationFrame(drawFrame);
+        }
+        
+        // 비디오가 재생될 때 캔버스 드로잉 시작
+        cameraView.onplay = drawFrame;
+
+        // 4. 캔버스 스트림을 녹화
+        const canvasStream = canvas.captureStream(30);
+        // 오디오 트랙 추가 (캔버스 스트림에는 오디오가 없으므로)
+        canvasStream.addTrack(stream.getAudioTracks()[0]);
 
         const mimeType = getSupportedMimeType();
         const options = mimeType ? { mimeType } : {};
-        mediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorder = new MediaRecorder(canvasStream, options);
 
         mediaRecorder.ondataavailable = function(event) {
             if (event.data.size > 0) {
                 recordedChunks.push(event.data);
             }
         };
-
+        
+        // ... (나머지 onstop 로직은 동일)
         mediaRecorder.onstop = async function() {
             const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/mp4' });
             recordedChunks = [];
             const currentAltitude = altitudeText.innerText;
-
-            // 🌟 녹화 완료 시점의 촬영 시간 생성 (24시간 형식 HH:MM)
             const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const recordTime = `${hours}:${minutes}`;
-
+            const recordTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             const savedId = await saveVideoToDB(blob, currentAltitude, recordTime);
             addVideoSlideToUI(blob, currentAltitude, savedId, recordTime);
         };
