@@ -1,10 +1,11 @@
+
 const cameraView = document.getElementById('camera-view');
 const recordBtn = document.getElementById('record-btn');
 const altitudeText = document.getElementById('altitude-text');
 const sliderWrapper = document.getElementById('slider-wrapper');
 const cameraPage = document.getElementById('camera-page');
 const switchCameraBtn = document.getElementById('switch-camera-btn');
-const totalDownloadBtn = document.getElementById('total-download-btn'); 
+const totalDownloadBtn = document.getElementById('total-download-btn'); // 🌟 전체 다운로드 버튼 가져오기
 
 let mediaRecorder;
 let recordedChunks = [];
@@ -51,24 +52,29 @@ function initDatabase() {
     });
 }
 
-// 실시간 촬영 대기화면 전용 시계 구동 함수
+// 실시간 촬영 대기화면 전용 시계 구동 함수 (🎨 크기 축소, 코너 밀착 및 동글한 시스템 폰트 적용)
 function startCameraClock() {
     let cameraTimeText = document.getElementById('camera-time-text');
     if (!cameraTimeText) {
         cameraTimeText = document.createElement('div');
         cameraTimeText.id = 'camera-time-text';
         
+        // 🌟 상단/좌측 여백을 30px에서 14px로 대폭 줄여 구석에 바짝 붙임
         cameraTimeText.style.position = 'absolute';
         cameraTimeText.style.top = '14px';
         cameraTimeText.style.left = '14px';
         cameraTimeText.style.color = 'white';
+        
+        // 🌟 크기를 24px에서 15px로 슬림하게 줄이고, 자간을 조여 귀여운 느낌 유도
         cameraTimeText.style.fontSize = '15px';
         cameraTimeText.style.fontWeight = '600';
+        
+        // 🌟 각진 기본 폰트 대신, 기기별 가장 둥글고 세련된 라운드형 시스템 폰트셋 부여
         cameraTimeText.style.fontFamily = 'system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
         cameraTimeText.style.letterSpacing = '-0.3px';
         cameraTimeText.style.zIndex = '10';
         if (cameraPage) {
-            cameraPage.style.position = 'relative'; 
+            cameraPage.style.position = 'relative'; // 기준점 고정
             cameraPage.appendChild(cameraTimeText);
         }
     }
@@ -80,7 +86,7 @@ function startCameraClock() {
         cameraTimeText.innerText = `${hours}:${minutes}`;
     }
     updateClock();
-    setInterval(updateClock, 1000); 
+    setInterval(updateClock, 1000); // 1초마다 촬영 대기화면 시간 업데이트
 }
 
 // 카메라 켜기
@@ -95,29 +101,26 @@ async function startCamera() {
             audio: true
         });
 
+        // 1. 화면 출력용 비디오 태그 설정
         cameraView.srcObject = stream;
         
+        // 2. 화면엔 거울처럼 보여주기 (CSS)
         if (currentFacingMode === "user") {
             cameraView.style.transform = "scaleX(-1)";
         } else {
             cameraView.style.transform = "scaleX(1)";
         }
 
+        // 3. 녹화용 캔버스 설정
+        const videoTrack = stream.getVideoTracks()[0];
+        const { width, height } = videoTrack.getSettings();
+        
         const canvas = document.createElement('canvas');
-
-        await new Promise(resolve => {
-            cameraView.onloadedmetadata = () => {
-                canvas.width = cameraView.videoWidth;
-                canvas.height = cameraView.videoHeight;
-                resolve();
-            };
-        });
-
+        canvas.width = width;
+        canvas.height = height;
         const ctx = canvas.getContext('2d');
 
-        const width = canvas.width;
-        const height = canvas.height;
-
+        // 매 프레임마다 캔버스에 그리기
         function drawFrame() {
             if (cameraView.paused || cameraView.ended) return;
             
@@ -132,20 +135,16 @@ async function startCamera() {
             requestAnimationFrame(drawFrame);
         }
         
+        // 비디오가 재생될 때 캔버스 드로잉 시작
         cameraView.onplay = drawFrame;
 
+        // 4. 캔버스 스트림을 녹화
         const canvasStream = canvas.captureStream(30);
-        
-        const audioTracks = stream.getAudioTracks();
-        if (audioTracks.length > 0) {
-            canvasStream.addTrack(audioTracks[0]);
-        }
+        // 오디오 트랙 추가 (캔버스 스트림에는 오디오가 없으므로)
+        canvasStream.addTrack(stream.getAudioTracks()[0]);
 
         const mimeType = getSupportedMimeType();
-        const options = mimeType ? { 
-            mimeType,
-            audioBitsPerSecond: 128000
-        } : {};
+        const options = mimeType ? { mimeType } : {};
         mediaRecorder = new MediaRecorder(canvasStream, options);
 
         mediaRecorder.ondataavailable = function(event) {
@@ -154,12 +153,13 @@ async function startCamera() {
             }
         };
         
+        // ... (나머지 onstop 로직은 동일)
         mediaRecorder.onstop = async function() {
             const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/mp4' });
             recordedChunks = [];
             const currentAltitude = altitudeText.innerText;
             const now = new Date();
-            const recordTime = `${String(now.getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
+            const recordTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             const savedId = await saveVideoToDB(blob, currentAltitude, recordTime);
             addVideoSlideToUI(blob, currentAltitude, savedId, recordTime);
         };
@@ -170,7 +170,7 @@ async function startCamera() {
     }
 }
 
-// IndexedDB에 영상을 저장하는 함수
+// IndexedDB에 영상을 저장하는 함수 (촬영 시간 데이터 포함)
 function saveVideoToDB(blob, altitude, recordTime) {
     return new Promise((resolve) => {
         const transaction = db.transaction(["videos"], "readwrite");
@@ -190,7 +190,7 @@ function deleteVideoFromDB(id) {
     });
 }
 
-// 디비에 저장되어 있던 영상들을 화면에 로드하는 함수
+// 디비에 저장되어 있던 영상들을 화면에 쭉 로드하는 함수
 function loadSavedVideos() {
     const transaction = db.transaction(["videos"], "readonly");
     const store = transaction.objectStore("videos");
@@ -204,57 +204,21 @@ function loadSavedVideos() {
     };
 }
 
-// 화면에 비디오 슬라이드 칸을 생성해주는 함수 (🎨 영상 비율 조작 절대 금지 + 순수 위아래 Crop 버전)
+// 화면에 비디오 슬라이드 칸을 생성해주는 함수 (🎨 슬라이드 내 시간 자막도 대기화면과 똑같이 미니멀화)
 function addVideoSlideToUI(blob, altitude, id, recordTime) {
     const videoURL = URL.createObjectURL(blob);
 
     const newSlide = document.createElement('div');
     newSlide.className = 'slide-page';
-    
-    // 🌟 [순수 크롭 핵심 1] 부모 상자는 영상 박스 비율을 유지하며, 삐져나오는 위아래 화면을 칼같이 잘라냅니다.
-    newSlide.style.position = 'relative'; 
-    newSlide.style.overflow = 'hidden'; 
-    newSlide.style.display = 'flex';
-    newSlide.style.justifyContent = 'center';
-    newSlide.style.alignItems = 'center';
-    newSlide.style.width = '100%';
-    newSlide.style.height = '100%';
-    newSlide.style.aspectRatio = '9 / 16';
+    newSlide.style.position = 'relative'; // 자막 배치를 위한 기준점 설정
 
     const newVideo = document.createElement('video');
-newVideo.src = videoURL;
+    newVideo.src = videoURL;
+    newVideo.className = 'saved-video';
 
-newVideo.addEventListener('loadedmetadata', () => {
-    alert(
-        'video: ' +
-        newVideo.videoWidth +
-        'x' +
-        newVideo.videoHeight +
-        '\n' +
-        'box: ' +
-        newSlide.clientWidth +
-        'x' +
-        newSlide.clientHeight
-    );
-});
-
-newVideo.className = 'saved-video';
-
-    // 🌟 [순수 크롭 핵심 2] 비율 조정 절대 금지! 
-    // 영상의 원래 비율(종횡비)을 브라우저가 강제로 찌그러트리지 못하도록 오직 고정 가로폭(100%)만 줍니다.
-    // 높이는 자동으로 원본 비율을 유지하며 흘러내리게 두고, 부모 상자의 overflow: hidden이 위아래만 잘라내게 만듭니다.
-    newVideo.style.setProperty('position', 'absolute', 'important');
-    newVideo.style.setProperty('width', '100%', 'important');
-    newVideo.style.setProperty('height', '100%', 'important');
-
-    newVideo.style.setProperty('object-fit', 'cover', 'important');
-    newVideo.style.setProperty('object-position', 'center center', 'important');
-    newVideo.style.setProperty('object-position', 'center center', 'important'); 
-
-    newVideo.muted = false; 
+    newVideo.muted = true;
     newVideo.playsInline = true;
     newVideo.setAttribute('playsinline', '');
-    newVideo.setAttribute('webkit-playsinline', '');
     newVideo.controls = true;
     newVideo.loop = true;
 
@@ -263,9 +227,11 @@ newVideo.className = 'saved-video';
     newOverlay.className = 'altitude-overlay';
     newOverlay.innerHTML = `<span>${altitude}</span>`;
 
-    // 영상 내부 왼쪽 상단 시간 자막 레이어 생성
+    // 🌟 [스타일 수정] 영상 내부 왼쪽 상단 시간 자막 레이어 생성
     const timeOverlay = document.createElement('div');
     timeOverlay.className = 'time-overlay';
+    
+    // 🌟 대기화면 시계와 매커니즘 및 콤팩트 스타일 일치 (구석 밀착 및 크기 축소)
     timeOverlay.style.position = 'absolute';
     timeOverlay.style.top = '14px';
     timeOverlay.style.left = '14px';
@@ -276,6 +242,7 @@ newVideo.className = 'saved-video';
     timeOverlay.style.letterSpacing = '-0.3px';
     timeOverlay.style.zIndex = '10';
 
+    // 기존 데이터에 시간이 없으면 현재 시간으로 방어 처리
     const displayTime = recordTime || `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
     timeOverlay.innerHTML = `<span>${displayTime}</span>`;
 
@@ -293,12 +260,16 @@ newVideo.className = 'saved-video';
 
     deleteBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
+
         if (confirm("이 영상을 영구 삭제하시겠습니까?")) {
             await deleteVideoFromDB(id);
+
             const childrenArray = Array.from(sliderWrapper.children);
             const slideIndex = childrenArray.indexOf(newSlide);
+
             newSlide.remove();
             totalSlides--;
+
             if (slideIndex <= currentSlideIndex) {
                 if (currentSlideIndex >= totalSlides) {
                     currentSlideIndex = totalSlides - 1;
@@ -306,13 +277,14 @@ newVideo.className = 'saved-video';
                     currentSlideIndex--;
                 }
             }
+
             updateSliderPosition();
         }
     });
 
     newSlide.appendChild(newVideo);
     newSlide.appendChild(newOverlay);
-    newSlide.appendChild(timeOverlay); 
+    newSlide.appendChild(timeOverlay); // 🌟 슬라이드 박스에 시간 자막 추가!
     newSlide.appendChild(deleteBtn);
 
     sliderWrapper.style.transition = 'none';
@@ -326,7 +298,7 @@ newVideo.className = 'saved-video';
     sliderWrapper.style.transition = 'transform 0.3s ease-out';
 }
 
-// 슬라이드가 이동할 때 현재 화면의 비디오 처리
+// 슬라이드가 이동할 때 현재 화면의 비디오만 깨워서 재생시키는 로직
 function updateSliderPosition() {
     sliderWrapper.style.transform = `translateX(-${currentSlideIndex * 100}%)`;
 
@@ -336,11 +308,9 @@ function updateSliderPosition() {
         if (video) {
             if (i === currentSlideIndex) {
                 video.load();
-                video.muted = false; 
                 video.play().catch(err => console.log("자동재생 정책 우회 중: ", err));
             } else {
                 video.pause();
-                video.muted = true;  
             }
         }
     }
@@ -400,6 +370,7 @@ document.addEventListener('mouseup', e => { touchEndX = e.screenX; handleSwipe()
 
 function handleSwipe() {
     const swipeDistance = touchStartX - touchEndX;
+
     if (swipeDistance < -50) {
         if (currentSlideIndex > 0) {
             currentSlideIndex--;
@@ -415,7 +386,7 @@ function handleSwipe() {
 }
 
 // ==========================================
-// 비디오 캔버스 병합 인코더 시스템 (소리 강제 추출 및 자막 좌표 전면 교정)
+// 비디오 캔버스 병합 인코더 시스템
 // ==========================================
 totalDownloadBtn.addEventListener('click', generateTotalLogVideo);
 
@@ -444,34 +415,11 @@ async function generateTotalLogVideo() {
         await new Promise((resolve) => { bgImg.onload = resolve; });
 
         const hiddenVideo = document.createElement('video');
-        hiddenVideo.muted = false; 
+        hiddenVideo.muted = true;
         hiddenVideo.playsInline = true;
-        hiddenVideo.setAttribute('playsinline', '');
-        hiddenVideo.setAttribute('crossorigin', 'anonymous');
-        hiddenVideo.preload = 'auto';
 
         const canvasStream = canvas.captureStream(30);
         const encodedChunks = [];
-
-        // 🌟 [3번 문제 해결] 모바일 자동재생 보안 정책 우회용 AudioContext 소리 결합 로직
-        let audioContext, audioDestination, mediaElementSource;
-        try {
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            audioContext = new AudioContextClass();
-            audioDestination = audioContext.createMediaStreamDestination();
-            mediaElementSource = audioContext.createMediaElementSource(hiddenVideo);
-            
-            // 비디오 소리를 오디오 믹서로 보내고, 최종 녹화 스트림에 강제로 유입시킴
-            mediaElementSource.connect(audioDestination);
-            mediaElementSource.connect(audioContext.destination); // 모니터링용 링크
-            
-            const compiledAudioTrack = audioDestination.stream.getAudioTracks()[0];
-            if (compiledAudioTrack) {
-                canvasStream.addTrack(compiledAudioTrack);
-            }
-        } catch (audioErr) {
-            console.log("웹 오디오 시스템 초기화 우회:", audioErr);
-        }
 
         function getDownloadMimeType() {
             const appleFriendlyTypes = [
@@ -515,6 +463,7 @@ async function generateTotalLogVideo() {
 
             const downloadAnchor = document.createElement('a');
             downloadAnchor.href = finalVideoURL;
+            
             downloadAnchor.download = `${formattedDate} 등산log.${extension}`;
             downloadAnchor.click();
 
@@ -527,8 +476,6 @@ async function generateTotalLogVideo() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4M7 10l5 5 5-5M12 15V3"/>
                 </svg><span>등산log 다운로드</span>`;
-            
-            if (audioContext) audioContext.close();
         };
 
         canvasRecorder.start();
@@ -537,18 +484,9 @@ async function generateTotalLogVideo() {
             hiddenVideo.src = URL.createObjectURL(item.videoBlob);
 
             await new Promise((resolve) => {
-                hiddenVideo.onloadedmetadata = () => {
-                    if (hiddenVideo.videoWidth > 0) resolve();
-                    else hiddenVideo.onloadeddata = resolve;
-                };
+                hiddenVideo.onloadedmetadata = resolve;
             });
-
-            if (audioContext && audioContext.state === 'suspended') {
-                await audioContext.resume();
-            }
-
-            hiddenVideo.volume = 1.0;
-            await hiddenVideo.play().catch(e => console.log("비디오 소리 트랙 활성화 우회 중:", e));
+            await hiddenVideo.play();
 
             let isCurrentVideoPlaying = true;
             hiddenVideo.onended = () => { isCurrentVideoPlaying = false; };
@@ -556,54 +494,45 @@ async function generateTotalLogVideo() {
             while (isCurrentVideoPlaying) {
                 ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
-                // 1. 영상 상자 틀 고정 (가로폭 85%, 16:9 가로형 비율)
-                const containerWidth = canvas.width * 0.85; 
-                const containerHeight = containerWidth * (9 / 16); 
+                // 1. 영상이 위치할 박스 틀 설정 (기존 비율 유지)
+                const containerWidth = canvas.width * 0.85; // 612px
+                const containerHeight = containerWidth * (9 / 16); // 344.25px (가로로 긴 비율로 고정!)
                 const videoX = (canvas.width - containerWidth) / 2;
                 const videoY = (canvas.height - containerHeight) / 2;
 
-                const rawW = hiddenVideo.videoWidth || 720;
-                const rawH = hiddenVideo.videoHeight || 1280;
-                
-                const realVideoWidth = Math.min(rawW, rawH);
-                const realVideoHeight = Math.max(rawW, rawH);
-                
+                // 2. [🌟 강제 크롭 핵심 수식] 
+                // 압축(찌그러짐) 없이 가로폭을 틀에 맞추고, 세로 원본 비율대로 확대하여 위아래를 넘치게 만듭니다.
                 const drawWidth = containerWidth;
-                const drawHeight = containerWidth * (realVideoHeight / realVideoWidth);
+                const drawHeight = containerWidth * (hiddenVideo.videoHeight / hiddenVideo.videoWidth);
                 
+                // 3. 넘친 영상의 위아래를 정확히 반반씩 잘라내기 위한 중앙 정렬 계산
                 const offsetX = videoX;
                 const offsetY = videoY - (drawHeight - containerHeight) / 2;
 
-                // 2. 영상 크롭해서 상자 안에 그리기
+                // 4. 둥근 모서리 틀을 만들고 넘치는 위아래 Cut!
                 ctx.save();
                 ctx.beginPath();
                 ctx.roundRect(videoX, videoY, containerWidth, containerHeight, 20);
-                ctx.clip(); 
+                ctx.clip(); // 🌟 이 명령어가 containerHeight(가로형 박스)를 벗어나는 위아래 영상을 칼같이 잘라냅니다!
+                
+                // 5. 계산된 좌표로 영상 그리기
                 ctx.drawImage(hiddenVideo, offsetX, offsetY, drawWidth, drawHeight);
                 ctx.restore();
 
-                // 🌟 [2번 문제 해결 - 자막 대폭 교정]
-                // 3. 시간 자막 그리기 (좌측 정렬 초기화 후 박스 내 안착, 가독성 확보를 위해 24px로 확대)
-                ctx.save();
-                ctx.font = "600 24px system-ui, -apple-system, sans-serif";
+                // 6. 시간 자막 (가로형 영상 박스 내부 좌측 상단에 안착)
+                ctx.font = "600 20px system-ui, -apple-system, sans-serif";
                 ctx.fillStyle = "white";
                 ctx.textAlign = "left";
                 ctx.textBaseline = "top";
                 const displayTime = item.recordTime || "00:00";
-                ctx.fillText(displayTime, videoX + 25, videoY + 25);
-                ctx.restore();
+                ctx.fillText(displayTime, videoX + 20, videoY + 20);
 
-                // 4. 고도 자막 그리기 (우측 쏠림 방지를 위한 타 정렬 차단 및 중앙 완전 일치 계산)
-                ctx.save();
-                ctx.font = "bold 38px sans-serif";
+                // 7. 고도 자막 (가로형 영상 박스 정중앙에 안착)
+                ctx.font = "bold 36px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
                 ctx.fillStyle = "white";
-                ctx.textAlign = "center";      // 기준 좌표로부터 완벽히 좌우 균등 분배 정렬
-                ctx.textBaseline = "middle";    // 기준 좌표로부터 상하 위아래 정중앙 정렬
-                
-                // canvas.width / 2 = 360px (전체 가로의 딱 절반 중앙점)
-                // videoY + (containerHeight / 2) = 영상 박스의 딱 상하 가운데 지점
                 ctx.fillText(item.altitudeText, canvas.width / 2, videoY + (containerHeight / 2));
-                ctx.restore();
 
                 await new Promise(requestAnimationFrame);
             }
@@ -618,10 +547,12 @@ async function initApp() {
     await initDatabase();
     loadSavedVideos();
     await startCamera();
-    startCameraClock();
+    startCameraClock(); // 🌟 촬영 대기화면 실시간 시계 작동 개시!
 
     altitudeText.innerText = "⛰️ 초기 고도 측정 중...";
     getRealAltitude();
 }
 
 initApp();
+
+
