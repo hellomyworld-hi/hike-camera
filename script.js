@@ -557,35 +557,38 @@ async function generateTotalLogVideo() {
                 const displayTime = item.recordTime || "00:00";
                 ctx.fillText(displayTime, videoX + 24, videoY + 24);
 
-                // 7. 고도 자막 (맥북 & 아이폰 사파리 크로스브라우징 완벽 호환 시스템)
-                ctx.font = "bold 46px sans-serif";
+                // 7. 고도 자막 (맥북 & 아이폰 사파리 폰트 크기 및 이모지 버그 완벽 해결 버전)
+                // 720px 해상도 기준 화면과 가장 잘 맞는 크기로 세팅 (기존 46px -> 38px 조정)
+                ctx.font = "bold 38px -apple-system, Apple SD Gothic Neo, Malgun Gothic, sans-serif";
                 ctx.fillStyle = "white";
                 ctx.textBaseline = "middle";
 
                 const fullAltitudeText = item.altitudeText || "⛰️ 해발 0m";
-                const emojiStr = "⛰️";
                 const cleanText = fullAltitudeText.replace("⛰️", "").trim(); // "해발 xxm"
                 
-                // 정렬 방식은 가장 기본적이고 안전한 "left"로 통일
+                // 텍스트 정렬은 가장 기본적이고 오류 없는 'left' 고정
                 ctx.textAlign = "left";
 
-                // 각각의 실제 가로 길이 측정
-                const emojiWidth = ctx.measureText(emojiStr).width;
-                const gap = 15; // 이모지와 글자 사이의 간격
-                const textWidth = ctx.measureText(cleanText).width;
+                // 💡 사파리 이모지 버그 방어: 이모지 가로폭을 브라우저에 묻지 않고 
+                // 38px 폰트 크기에 비례하는 고정값(약 42px)을 강제로 부여합니다.
+                const safeEmojiWidth = 42; 
+                const gap = 12; // 이모지와 글자 사이의 간격
+                const textWidth = ctx.measureText(cleanText).width; // "해발 xxm"의 실제 가로 길이
                 
-                // 전체 콘텐츠(이모지 + 간격 + 글자)의 총 가로 길이 및 시작점 계산
-                const totalContentWidth = emojiWidth + gap + textWidth;
+                // 전체 콘텐츠의 총 가로 길이 계산
+                const totalContentWidth = safeEmojiWidth + gap + textWidth;
+                
+                // 전체 가로 중앙(canvas.width / 2)을 기준으로 시작점 X 좌표 도출
                 const startX = (canvas.width - totalContentWidth) / 2;
                 const centerY = videoY + (containerHeight / 2);
 
                 // 1. 이모지 그리기
-                ctx.fillText(emojiStr, startX, centerY);
+                ctx.fillText("⛰️", startX, centerY);
 
-                // 2. 이모지 우측에 "해발 xxm" 글씨 그리기
-                ctx.fillText(cleanText, startX + emojiWidth + gap, centerY);
+                // 2. 이모지 폭과 간격을 더한 안전한 절대 좌표에 글씨 그리기
+                ctx.fillText(cleanText, startX + safeEmojiWidth + gap, centerY);
 
-                // 🌟 다음 프레임을 위해 그림자 효과 리셋 (필수 유지)
+                // 🌟 다음 프레임을 위해 그림자 효과 리셋
                 ctx.shadowColor = "transparent";
                 ctx.shadowBlur = 0;
                 ctx.shadowOffsetX = 0;
