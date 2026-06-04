@@ -554,40 +554,49 @@ async function generateTotalLogVideo() {
                 // =========================================
                 ctx.fillStyle = "white"; // 모든 자막 색상
 
-                // 6. 시간 자막 (🎨 컴팩트하게 크기 축소 및 위치 조정)
-                // 폰트 크기를 더 줄여서 delicately하게 표현
-                ctx.font = "bold 26px -apple-system, Apple SD Gothic Neo, Malgun Gothic, sans-serif";
+               // =========================================
+                // 자막 렌더링 시스템 (초미니멀 & 그림자 제거 버전)
+                // =========================================
+                
+                // 🌟 글자 그림자 효과 완전히 제거
+                ctx.shadowColor = "transparent";
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+                
+                ctx.fillStyle = "white"; // 자막 색상 고정
+
+                // 6. 시간 자막 (더더욱 작게 축소 및 위치 조정)
+                // 기존 26px -> 18px로 대폭 축소하여 아주 미니멀하게 변경
+                ctx.font = "600 18px -apple-system, Apple SD Gothic Neo, Malgun Gothic, sans-serif";
                 ctx.textAlign = "left";
                 ctx.textBaseline = "top";
                 
-                // 기존 위치에서 살짝 더 안쪽으로 당겨서 더 세련되게 배치
-                const timeX = videoX + 20; 
-                const timeY = videoY + 20; 
+                // 영상 구석에 바짝 붙도록 여백 조정
+                const timeX = videoX + 16; 
+                const timeY = videoY + 16; 
                 
                 const displayTime = item.recordTime || "00:00";
                 ctx.fillText(displayTime, timeX, timeY);
 
 
-                // 7. 고도 자막 (🎨 전체적인 크기를 더 줄여서 délicate한 비율 구현)
-                // 폰트 크기를 줄여서 '오른쪽 사진'의 비율과 일치하도록 최적화
-                ctx.font = "bold 32px -apple-system, Apple SD Gothic Neo, Malgun Gothic, sans-serif"; 
+                // 7. 고도 자막 (더더욱 작고 세련된 크기로 축소)
+                // 기존 32px -> 23px로 대폭 축소 (원하시는 왼쪽 사진의 작은 크기 구현)
+                ctx.font = "bold 23px -apple-system, Apple SD Gothic Neo, Malgun Gothic, sans-serif"; 
                 ctx.textBaseline = "middle";
-                ctx.textAlign = "left"; // 겹침 방지를 위해 'left' 고정
+                ctx.textAlign = "left"; 
 
                 const fullAltitudeText = item.altitudeText || "⛰️ 해발 0m";
                 const emojiStr = "⛰️";
                 const cleanText = fullAltitudeText.replace("⛰️", "").trim(); // "해발 xxm"
 
-                // 💡 [아이폰 버그 완벽 방어] 이모지 가로폭을 강제 고정합니다. 
-                // 폰트 크기에 맞게 이모지 폭도 줄여 비율을 맞춥니다.
-                const fixedEmojiWidth = 36; // 기존 42에서 줄임
-                const gap = 10; // 이모지와 글자 사이의 간격
+                // 💡 줄어든 폰트 크기(23px)에 맞춰 이모지 폭과 간격도 컴팩트하게 재조정
+                const fixedEmojiWidth = 26; // 이모지 폭 축소
+                const gap = 8;  // 간격 축소
                 const textWidth = ctx.measureText(cleanText).width;
                 
-                // 전체 콘텐츠의 총 가로 길이 계산
+                // 전체 가로 길이 재계산 후 정중앙 배치
                 const totalContentWidth = fixedEmojiWidth + gap + textWidth;
-                
-                // 중앙 시작점 계산
                 const startX = (canvas.width - totalContentWidth) / 2;
                 const centerY = videoY + (containerHeight / 2);
 
@@ -598,12 +607,7 @@ async function generateTotalLogVideo() {
                 ctx.fillText(cleanText, startX + fixedEmojiWidth + gap, centerY);
 
 
-                // 🌟 다음 프레임을 위해 그림자 효과 리셋 (필수 유지)
-                ctx.shadowColor = "transparent";
-                ctx.shadowBlur = 0;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 0;
-
+                // 🌟 다음 프레임을 위한 렌더링 대기 (필수 유지)
                 await new Promise(requestAnimationFrame);
             }
         }
