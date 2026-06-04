@@ -442,8 +442,51 @@ async function generateTotalLogVideo() {
         hiddenVideo.style.pointerEvents = 'none';
         document.body.appendChild(hiddenVideo);
 
+        // 믹싱용 오디오 컨텍스트 설정 시작
+        let audioContext = null;
+        let audioDestination = null;
+        let audioSource = null;
+
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            audioContext = new AudioContextClass();
+            audioDestination = audioContext.createMediaStreamDestination();
+            
+            // 사파리가 오디오 트랙을 만들도록 muted를 풀고 볼륨만 0으로 처리
+            hiddenVideo.muted = false;
+            hiddenVideo.volume = 0;
+
+            audioSource = audioContext.createMediaElementSource(hiddenVideo);
+            audioSource.connect(audioDestination);
+        } catch (err) {
+            console.warn("오디오 설정 실패:", err);
+        }
+
+        // 1. 캔버스 스트림 생성
         const canvasStream = canvas.captureStream(30);
+        
+        // 2. 비디오 트랙과 가로챈 오디오 트랙을 하나로 결합
+        const combinedStream = new MediaStream();
+        canvasStream.getVideoTracks().forEach(track => combinedStream.addTrack(track));
+
+        if (audioDestination && audioDestination.stream.getAudioTracks().length > 0) {
+            const audioTrack = audioDestination.stream.getAudioTracks()[0];
+            combinedStream.addTrack(audioTrack);
+        }
+
+        // 3. 인코딩 청크 배열 선언
         const encodedChunks = [];
+        
+        // 브라우저 지원 코덱 설정
+        const downloadMimeType = getDownloadMimeType();
+        
+        // 🌟 변수명을 기존 코드와 같은 'canvasRecorder'로 매칭했습니다!
+        const canvasRecorder = new MediaRecorder(combinedStream, downloadMimeType ? { mimeType: downloadMimeType } : {});
+
+        canvasRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) encodedChunks.push(event.data);
+        };
+
 
         function getDownloadMimeType() {
             const appleFriendlyTypes = [
