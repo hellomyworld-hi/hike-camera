@@ -380,7 +380,7 @@ async function generateTotalLogVideo() {
     request.onsuccess = async function(e) {
         const savedList = e.target.result.sort((a, b) => a.id - b.id);
         if (savedList.length === 0) {
-            alert("아직 촬영된 등산 추억 영상이 없습니다! 먼저 영상을 녹화해 주세요.");
+            alert("아직 촬영된 영상이 없습니다! 먼저 영상을 녹화해 주세요.");
             return;
         }
 
