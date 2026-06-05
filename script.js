@@ -4,7 +4,7 @@ const altitudeText = document.getElementById('altitude-text');
 const sliderWrapper = document.getElementById('slider-wrapper');
 const cameraPage = document.getElementById('camera-page');
 const switchCameraBtn = document.getElementById('switch-camera-btn');
-const totalDownloadBtn = document.getElementById('total-download-btn'); // 🌟 전체 다운로드 버튼 가져오기
+const totalDownloadBtn = document.getElementById('total-download-btn'); 
 
 let mediaRecorder;
 let recordedChunks = [];
@@ -51,29 +51,26 @@ function initDatabase() {
     });
 }
 
-// 실시간 촬영 대기화면 전용 시계 구동 함수 (🎨 크기 축소, 코너 밀착 및 동글한 시스템 폰트 적용)
+// 실시간 촬영 대기화면 전용 시계 구동 함수
 function startCameraClock() {
     let cameraTimeText = document.getElementById('camera-time-text');
     if (!cameraTimeText) {
         cameraTimeText = document.createElement('div');
         cameraTimeText.id = 'camera-time-text';
         
-        // 🌟 상단/좌측 여백을 30px에서 14px로 대폭 줄여 구석에 바짝 붙임
         cameraTimeText.style.position = 'absolute';
         cameraTimeText.style.top = '14px';
         cameraTimeText.style.left = '14px';
         cameraTimeText.style.color = 'white';
         
-        // 🌟 크기를 24px에서 15px로 슬림하게 줄이고, 자간을 조여 귀여운 느낌 유도
         cameraTimeText.style.fontSize = '15px';
         cameraTimeText.style.fontWeight = '600';
         
-        // 🌟 각진 기본 폰트 대신, 기기별 가장 둥글고 세련된 라운드형 시스템 폰트셋 부여
         cameraTimeText.style.fontFamily = 'system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
         cameraTimeText.style.letterSpacing = '-0.3px';
-        cameraTimeText.style.zIndex = '10';
+        cameraTimeText.style.zIndex = '12'; // 🌟 방어막(zIndex: 11)보다 위에 보이도록 상향 조정
         if (cameraPage) {
-            cameraPage.style.position = 'relative'; // 기준점 고정
+            cameraPage.style.position = 'relative'; 
             cameraPage.appendChild(cameraTimeText);
         }
     }
@@ -85,7 +82,7 @@ function startCameraClock() {
         cameraTimeText.innerText = `${hours}:${minutes}`;
     }
     updateClock();
-    setInterval(updateClock, 1000); // 1초마다 촬영 대기화면 시간 업데이트
+    setInterval(updateClock, 1000); 
 }
 
 // 카메라 켜기
@@ -100,34 +97,48 @@ async function startCamera() {
             audio: true
         });
 
-        // 1. 화면 출력용 비디오 태그 설정
         cameraView.srcObject = stream;
         
-        // 2. 화면엔 거울처럼 보여주기 (CSS)
         if (currentFacingMode === "user") {
             cameraView.style.transform = "scaleX(-1)";
         } else {
             cameraView.style.transform = "scaleX(1)";
         }
 
-        // 3. 녹화용 캔버스 설정
+        // 🌟 [사파리 일시정지 아이콘 버그 파괴] 투명 방어막 레이어 생성
+        let safariShield = document.getElementById('safari-shield');
+        if (!safariShield) {
+            safariShield = document.createElement('div');
+            safariShield.id = 'safari-shield';
+            safariShield.style.position = 'absolute';
+            safariShield.style.top = '0';
+            safariShield.style.left = '0';
+            safariShield.style.width = '100%';
+            safariShield.style.height = '100%';
+            safariShield.style.backgroundColor = 'transparent';
+            safariShield.style.zIndex = '11'; // 비디오 태그 바로 위에 얹음
+            
+            // cameraView의 부모 요소에 넣어 버튼들과 겹치지 않게 비디오 영역만 가림
+            if (cameraView.parentElement) {
+                cameraView.parentElement.style.position = 'relative';
+                cameraView.parentElement.appendChild(safariShield);
+            }
+        }
+
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        // 비디오 메타데이터가 로드되어 '실제 화면 해상도'를 알 수 있을 때 캔버스 크기 세팅
         cameraView.onloadedmetadata = () => {
             canvas.width = cameraView.videoWidth;
             canvas.height = cameraView.videoHeight;
         };
 
-        // 매 프레임마다 캔버스에 그리기
         function drawFrame() {
             if (cameraView.paused || cameraView.ended || !canvas.width) {
                 requestAnimationFrame(drawFrame);
                 return;
             }
             
-            // 아이폰 화면 회전 등으로 인해 실시간으로 해상도가 변할 경우 대응
             const vw = cameraView.videoWidth;
             const vh = cameraView.videoHeight;
             if (canvas.width !== vw || canvas.height !== vh) {
@@ -146,12 +157,9 @@ async function startCamera() {
             requestAnimationFrame(drawFrame);
         }
         
-        // 비디오가 재생될 때 캔버스 드로잉 시작
         cameraView.onplay = drawFrame;
 
-        // 4. 캔버스 스트림을 녹화
         const canvasStream = canvas.captureStream(30);
-        // 오디오 트랙 추가 (캔버스 스트림에는 오디오가 없으므로)
         canvasStream.addTrack(stream.getAudioTracks()[0]);
 
         const mimeType = getSupportedMimeType();
@@ -180,7 +188,6 @@ async function startCamera() {
     }
 }
 
-// IndexedDB에 영상을 저장하는 함수 (촬영 시간 데이터 포함)
 function saveVideoToDB(blob, altitude, recordTime) {
     return new Promise((resolve) => {
         const transaction = db.transaction(["videos"], "readwrite");
@@ -190,7 +197,6 @@ function saveVideoToDB(blob, altitude, recordTime) {
     });
 }
 
-// IndexedDB에서 고유 ID로 영상을 삭제하는 함수
 function deleteVideoFromDB(id) {
     return new Promise((resolve) => {
         const transaction = db.transaction(["videos"], "readwrite");
@@ -200,7 +206,6 @@ function deleteVideoFromDB(id) {
     });
 }
 
-// 디비에 저장되어 있던 영상들을 화면에 쭉 로드하는 함수
 function loadSavedVideos() {
     const transaction = db.transaction(["videos"], "readonly");
     const store = transaction.objectStore("videos");
@@ -214,13 +219,12 @@ function loadSavedVideos() {
     };
 }
 
-// 화면에 비디오 슬라이드 칸을 생성해주는 함수 (🎨 슬라이드 내 시간 자막도 대기화면과 똑같이 미니멀화)
 function addVideoSlideToUI(blob, altitude, id, recordTime) {
     const videoURL = URL.createObjectURL(blob);
 
     const newSlide = document.createElement('div');
     newSlide.className = 'slide-page';
-    newSlide.style.position = 'relative'; // 자막 배치를 위한 기준점 설정
+    newSlide.style.position = 'relative'; 
 
     const newVideo = document.createElement('video');
     newVideo.src = videoURL;
@@ -232,16 +236,13 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
     newVideo.controls = true;
     newVideo.loop = true;
 
-    // 중앙 고도 자막 레이어
     const newOverlay = document.createElement('div');
     newOverlay.className = 'altitude-overlay';
     newOverlay.innerHTML = `<span>${altitude}</span>`;
 
-    // 🌟 [스타일 수정] 영상 내부 왼쪽 상단 시간 자막 레이어 생성
     const timeOverlay = document.createElement('div');
     timeOverlay.className = 'time-overlay';
     
-    // 🌟 대기화면 시계와 매커니즘 및 콤팩트 스타일 일치 (구석 밀착 및 크기 축소)
     timeOverlay.style.position = 'absolute';
     timeOverlay.style.top = '14px';
     timeOverlay.style.left = '14px';
@@ -252,7 +253,6 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
     timeOverlay.style.letterSpacing = '-0.3px';
     timeOverlay.style.zIndex = '10';
 
-    // 기존 데이터에 시간이 없으면 현재 시간으로 방어 처리
     const displayTime = recordTime || `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
     timeOverlay.innerHTML = `<span>${displayTime}</span>`;
 
@@ -294,7 +294,7 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
 
     newSlide.appendChild(newVideo);
     newSlide.appendChild(newOverlay);
-    newSlide.appendChild(timeOverlay); // 🌟 슬라이드 박스에 시간 자막 추가!
+    newSlide.appendChild(timeOverlay); 
     newSlide.appendChild(deleteBtn);
 
     sliderWrapper.style.transition = 'none';
@@ -308,7 +308,6 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
     sliderWrapper.style.transition = 'transform 0.3s ease-out';
 }
 
-// 슬라이드가 이동할 때 현재 화면의 비디오만 깨워서 재생시키는 로직
 function updateSliderPosition() {
     sliderWrapper.style.transform = `translateX(-${currentSlideIndex * 100}%)`;
 
@@ -326,7 +325,6 @@ function updateSliderPosition() {
     }
 }
 
-// 실시간 고도 측정
 function getRealAltitude() {
     navigator.geolocation.getCurrentPosition(async function(position) {
         const lat = position.coords.latitude;
@@ -344,7 +342,6 @@ function getRealAltitude() {
     });
 }
 
-// REC 버튼
 recordBtn.addEventListener('click', () => {
     if (!mediaRecorder || mediaRecorder.state === 'recording') return;
 
@@ -363,13 +360,11 @@ recordBtn.addEventListener('click', () => {
     }, 3000); 
 });
 
-// 카메라 뒤집기 버튼
 switchCameraBtn.addEventListener('click', () => {
     currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
     startCamera();
 });
 
-// 손가락/마우스 슬라이드 스와이프
 let touchStartX = 0;
 let touchEndX = 0;
 
@@ -429,8 +424,6 @@ async function generateTotalLogVideo() {
         hiddenVideo.playsInline = true;
         hiddenVideo.setAttribute('playsinline', ''); 
         
-        // 🌟 아이폰 필수: display='none' 대신, 크기를 1px로 줄여 화면 밖에 투명하게 숨겨야 
-        // 아이폰 엔진이 비디오를 검은 화면으로 만들지 않고 정상적으로 그려냅니다.
         hiddenVideo.style.position = 'fixed';
         hiddenVideo.style.top = '0';
         hiddenVideo.style.left = '-9999px'; 
@@ -516,55 +509,45 @@ async function generateTotalLogVideo() {
             while (isCurrentVideoPlaying) {
                 ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
-                // 1. 영상이 위치할 박스 틀 설정 (기존 비율 유지)
-                const containerWidth = canvas.width * 0.85; // 612px
-                const containerHeight = containerWidth * (9 / 16); // 344.25px (가로로 긴 비율로 고정!)
+                const containerWidth = canvas.width * 0.85; 
+                const containerHeight = containerWidth * (9 / 16); 
                 const videoX = (canvas.width - containerWidth) / 2;
                 const videoY = (canvas.height - containerHeight) / 2;
 
-                // 2. [🌟 강제 크롭 핵심 수식] 
                 const drawWidth = containerWidth;
                 const drawHeight = containerWidth * (hiddenVideo.videoHeight / hiddenVideo.videoWidth);
                 
-                // 3. 넘친 영상의 위아래를 정확히 반반씩 잘라내기 위한 중앙 정렬 계산
                 const offsetX = videoX;
                 const offsetY = videoY - (drawHeight - containerHeight) / 2;
 
-                // 4. 둥근 모서리 틀을 만들고 넘치는 위아래 Cut!
                 ctx.save();
                 ctx.beginPath();
                 ctx.roundRect(videoX, videoY, containerWidth, containerHeight, 20);
-                ctx.clip(); // 🌟 이 명령어가 containerHeight(가로형 박스)를 벗어나는 위아래 영상을 칼같이 잘라냅니다!
+                ctx.clip(); 
                 
-                // 5. 계산된 좌표로 영상 그리기
                 ctx.drawImage(hiddenVideo, offsetX, offsetY, drawWidth, drawHeight);
                 ctx.restore();
 
                 // =========================================
                 // 자막 렌더링 시스템 (28px 최종 정밀 버전)
                 // =========================================
-                
-                // 🌟 글자 그림자 효과 제거 유지
                 ctx.shadowColor = "transparent";
                 ctx.shadowBlur = 0;
                 ctx.shadowOffsetX = 0;
                 ctx.shadowOffsetY = 0;
                 
-                ctx.fillStyle = "white"; // 자막 색상
+                ctx.fillStyle = "white"; 
 
-                // 6. 시간 자막 (28px 해발 자막에 맞춘 자연스러운 크기)
-                // 밸런스가 가장 예쁜 23px로 세팅
+                // 6. 시간 자막
                 ctx.font = "600 23px -apple-system, Apple SD Gothic Neo, Malgun Gothic, sans-serif";
                 ctx.textAlign = "left";
                 ctx.textBaseline = "top";
                 
-                // 구석 여백 안정적으로 배치
                 const timeX = videoX + 19; 
                 const timeY = videoY + 19; 
                 
                 const displayTime = item.recordTime || "00:00";
                 ctx.fillText(displayTime, timeX, timeY);
-
 
                 // 7. 고도 자막 (요청하신 완벽한 28px 크기!)
                 ctx.font = "bold 28px -apple-system, Apple SD Gothic Neo, Malgun Gothic, sans-serif"; 
@@ -573,32 +556,25 @@ async function generateTotalLogVideo() {
 
                 const fullAltitudeText = item.altitudeText || "⛰️ 해발 0m";
                 const emojiStr = "⛰️";
-                const cleanText = fullAltitudeText.replace("⛰️", "").trim(); // "해발 xxm"
+                const cleanText = fullAltitudeText.replace("⛰️", "").trim(); 
 
-                // 💡 28px 폰트 크기에 완벽하게 대응하는 이모지 폭과 간격 계산
-                const fixedEmojiWidth = 33; // 28px 비율에 최적화된 이모지 폭
-                const gap = 9;  // 자연스러운 글자 간격
+                const fixedEmojiWidth = 33; 
+                const gap = 9;  
                 const textWidth = ctx.measureText(cleanText).width;
                 
-                // 전체 가로 길이 계산 후 완벽한 정중앙 배치
                 const totalContentWidth = fixedEmojiWidth + gap + textWidth;
                 const startX = (canvas.width - totalContentWidth) / 2;
                 const centerY = videoY + (containerHeight / 2);
 
-                // 1단계: 이모지 그리기
                 ctx.fillText(emojiStr, startX, centerY);
-
-                // 2단계: 이모지 우측에 글씨 그리기
                 ctx.fillText(cleanText, startX + fixedEmojiWidth + gap, centerY);
 
-
-                // 🌟 다음 프레임을 위한 렌더링 대기 (필수 유지)
                 await new Promise(requestAnimationFrame);
             }
         }
 
         canvasRecorder.stop();
-        hiddenVideo.remove(); // 🌟 작업이 끝난 후 숨겨둔 비디오를 화면에서 삭제
+        hiddenVideo.remove(); 
     };
 }
 
@@ -607,7 +583,7 @@ async function initApp() {
     await initDatabase();
     loadSavedVideos();
     await startCamera();
-    startCameraClock(); // 🌟 촬영 대기화면 실시간 시계 작동 개시!
+    startCameraClock(); 
 
     altitudeText.innerText = "⛰️ 초기 고도 측정 중...";
     getRealAltitude();
