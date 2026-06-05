@@ -95,10 +95,10 @@ async function startCamera() {
     }
 
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: currentFacingMode },
-            audio: true
-        });
+const stream = await navigator.mediaDevices.getUserMedia({ 
+    video: { facingMode: "environment" },
+    audio: true // 🎤 촬영할 때 마이크 소리도 같이 내보내라는 뜻!
+});
 
         // 1. 화면 출력용 비디오 태그 설정
         cameraView.srcObject = stream;
@@ -449,11 +449,13 @@ async function generateTotalLogVideo() {
         bgImg.src = 'my-background.png';
         await new Promise((resolve) => { bgImg.onload = resolve; });
 
+        // 🎧 [소리 복구 핵심 1] 합성할 때 비디오 소리를 뽑아내기 위해 무음(muted) 해제
         const hiddenVideo = document.createElement('video');
-        hiddenVideo.muted = true;
+        hiddenVideo.muted = false; // 🔊 소리가 나야 오디오 트랙이 캡처됩니다!
         hiddenVideo.playsInline = true;
         hiddenVideo.setAttribute('playsinline', ''); 
         
+        // 📱 화면에는 안 보이게 픽셀 구석으로 유령처럼 숨김 처리 유지
         hiddenVideo.style.position = 'fixed';
         hiddenVideo.style.top = '0';
         hiddenVideo.style.left = '-9999px'; 
@@ -463,7 +465,31 @@ async function generateTotalLogVideo() {
         hiddenVideo.style.pointerEvents = 'none';
         document.body.appendChild(hiddenVideo);
 
+        // 🎥 캔버스 그림(그림판) 스트림 가져오기
         const canvasStream = canvas.captureStream(30);
+        
+        // 🎧 [소리 복구 핵심 2] 숨겨진 비디오 태그에서 재생되는 오디오 소리 트랙을 통째로 캡처
+        // 사파리 버그 우회 및 크로스 브라우징을 위한 안전망 구축
+        let videoAudioStream;
+        if (hiddenVideo.captureStream) {
+            videoAudioStream = hiddenVideo.captureStream();
+        } else if (hiddenVideo.mozCaptureStream) {
+            videoAudioStream = hiddenVideo.mozCaptureStream();
+        }
+
+        // 🎧 [소리 복구 핵심 3] 캔버스 비디오 스트림에 비디오에서 나오는 소리 트랙을 끈끈하게 결합
+        if (videoAudioStream && videoAudioStream.getAudioTracks().length > 0) {
+            canvasStream.addTrack(videoAudioStream.getAudioTracks()[0]);
+        } else {
+            // 브라우저에 따라 실시간 플레이 중에만 오디오 트랙이 잡히는 경우를 대비한 2차 방어선
+            hiddenVideo.addEventListener('play', () => {
+                const liveStream = hiddenVideo.captureStream ? hiddenVideo.captureStream() : null;
+                if (liveStream && liveStream.getAudioTracks().length > 0 && canvasStream.getAudioTracks().length === 0) {
+                    canvasStream.addTrack(liveStream.getAudioTracks()[0]);
+                }
+            }, { once: true });
+        }
+
         const encodedChunks = [];
 
         function getDownloadMimeType() {
@@ -481,7 +507,18 @@ async function generateTotalLogVideo() {
         }
 
         const downloadMimeType = getDownloadMimeType();
-        const canvasRecorder = new MediaRecorder(canvasStream, downloadMimeType ? { mimeType: downloadMimeType } : {});
+        
+        // 🎧 [소리 복구 핵심 4] 비디오 코덱 뒤에 반드시 오디오 코덱(opus 혹은 mp4 오디오)이 굽히도록 사전 정의
+        let recorderOptions = {};
+        if (downloadMimeType) {
+            if (downloadMimeType.includes('webm')) {
+                recorderOptions = { mimeType: 'video/webm;codecs=vp9,opus' };
+            } else {
+                recorderOptions = { mimeType: downloadMimeType };
+            }
+        }
+
+        const canvasRecorder = new MediaRecorder(canvasStream, recorderOptions);
 
         canvasRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) encodedChunks.push(event.data);
@@ -558,16 +595,6 @@ async function generateTotalLogVideo() {
                 ctx.drawImage(hiddenVideo, offsetX, offsetY, drawWidth, drawHeight);
                 ctx.restore();
 
-                ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
-                ctx.shadowBlur = 4;
-                ctx.shadowOffsetX = 1;
-                ctx.shadowOffsetY = 1;
-
-                ctx.shadowColor = "transparent";
-                ctx.shadowBlur = 0;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 0;
-                
                 ctx.fillStyle = "white"; 
 
                 ctx.font = "600 22px -apple-system, Apple SD Gothic Neo, Malgun Gothic, sans-serif";
