@@ -6,21 +6,6 @@ const cameraPage = document.getElementById('camera-page');
 const switchCameraBtn = document.getElementById('switch-camera-btn');
 const totalDownloadBtn = document.getElementById('total-download-btn');
 
-// 타이머 관련 DOM
-const timerBtn = document.getElementById('timer-btn');
-const timerMenu = document.getElementById('timer-menu');
-const timerIconSvg = document.getElementById('timer-icon-svg');
-const timerBtnText = document.getElementById('timer-btn-text');
-const timerOptionBtns = document.querySelectorAll('.timer-option-btn');
-const timerClearBtn = document.getElementById('timer-clear-btn'); 
-
-// 배율 관련 DOM
-const zoomBtn = document.getElementById('zoom-btn');
-const zoomMenu = document.getElementById('zoom-menu');
-const zoomBtnText = document.getElementById('zoom-btn-text');
-const zoomOptionBtns = document.querySelectorAll('.zoom-option-btn');
-const zoom05Btn = document.getElementById('zoom-05-btn'); 
-
 let mediaRecorder;
 let recordedChunks = [];
 let currentSlideIndex = 0;
@@ -29,17 +14,11 @@ let totalSlides = 1;
 let currentFacingMode = "user"; 
 let db;
 
-let selectedTimerSeconds = 0; 
-let currentZoomScale = 1.0; 
-
-// 🔊 모바일 소리 출력을 완벽하게 보장하는 호환성 고음질 코덱 명시
 function getSupportedMimeType() {
     const types = [
-        'video/mp4;codecs=avc1,mp4a.40.2', 
         'video/mp4;codecs=avc1',
         'video/mp4',
-        'video/webm;codecs=vp9,opus',
-        'video/webm;codecs=vp8,opus',
+        'video/webm;codecs=vp9',
         'video/webm'
     ];
     for (const type of types) {
@@ -95,21 +74,10 @@ function startCameraClock() {
     setInterval(updateClock, 1000);
 }
 
-// 📸 카메라 켜기 함수
 async function startCamera() {
     if (cameraView.srcObject) {
         cameraView.srcObject.getTracks().forEach(track => track.stop());
         cameraView.srcObject = null;
-    }
-
-    if (currentFacingMode === "user") {
-        zoom05Btn.classList.add('hide-option');
-        if (currentZoomScale === 0.5) {
-            currentZoomScale = 1.0;
-            zoomBtnText.innerText = '1x';
-        }
-    } else {
-        zoom05Btn.classList.remove('hide-option');
     }
 
     try {
@@ -123,8 +91,11 @@ async function startCamera() {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         cameraView.srcObject = stream;
         
-        applyHardwareZoom(stream, currentZoomScale);
-        updateCameraTransformStyle();
+        if (currentFacingMode === "user") {
+            cameraView.style.transform = "scaleX(-1)";
+        } else {
+            cameraView.style.transform = "scaleX(1)";
+        }
 
         if (recordBtn) recordBtn.style.zIndex = '30';
         if (switchCameraBtn) switchCameraBtn.style.zIndex = '30';
@@ -151,32 +122,11 @@ async function startCamera() {
             }
 
             ctx.save();
-            
-            let sw = vw;
-            let sh = vh;
-            let sx = 0;
-            let sy = 0;
-
-            if (currentZoomScale > 1.0) {
-                sw = vw / currentZoomScale;
-                sh = vh / currentZoomScale;
-                sx = (vw - sw) / 2;
-                sy = (vh - sh) / 2;
-            }
-
             if (currentFacingMode === "user") {
                 ctx.scale(-1, 1);
-                if (currentZoomScale < 1.0) {
-                    ctx.drawImage(cameraView, 0, 0, vw, vh, -vw, 0, vw, vh);
-                } else {
-                    ctx.drawImage(cameraView, sx, sy, sw, sh, -vw, 0, vw, vh);
-                }
+                ctx.drawImage(cameraView, -vw, 0, vw, vh);
             } else {
-                if (currentZoomScale < 1.0) {
-                    ctx.drawImage(cameraView, 0, 0, vw, vh, 0, 0, vw, vh);
-                } else {
-                    ctx.drawImage(cameraView, sx, sy, sw, sh, 0, 0, vw, vh);
-                }
+                ctx.drawImage(cameraView, 0, 0, vw, vh);
             }
             ctx.restore();
             requestAnimationFrame(drawFrame);
@@ -186,13 +136,13 @@ async function startCamera() {
 
         const canvasStream = canvas.captureStream(30);
         const flippedVideoTrack = canvasStream.getVideoTracks()[0];
-        const audioTracks = stream.getAudioTracks();
 
-        const tracksToCombine = [flippedVideoTrack];
-        if (audioTracks.length > 0) {
-            tracksToCombine.push(audioTracks[0]);
+        const combinedStream = new MediaStream();
+        combinedStream.addTrack(flippedVideoTrack);
+
+        if (stream.getAudioTracks().length > 0) {
+            combinedStream.addTrack(stream.getAudioTracks()[0]);
         }
-        const combinedStream = new MediaStream(tracksToCombine);
 
         const mimeType = getSupportedMimeType();
         const options = mimeType ? { mimeType } : {};
@@ -224,26 +174,6 @@ async function startCamera() {
     }
 }
 
-function applyHardwareZoom(stream, zoomValue) {
-    const videoTrack = stream.getVideoTracks()[0];
-    if (videoTrack && typeof videoTrack.getCapabilities === 'function') {
-        const capabilities = videoTrack.getCapabilities();
-        if (capabilities.zoom) {
-            const targetZoom = Math.max(capabilities.zoom.min, Math.min(capabilities.zoom.max, zoomValue));
-            videoTrack.applyConstraints({ advanced: [{ zoom: targetZoom }] })
-                .catch(err => console.log("하드웨어 물리 줌 조절 제어 우회:", err));
-        }
-    }
-}
-
-function updateCameraTransformStyle() {
-    let baseScaleX = (currentFacingMode === "user") ? -1 : 1;
-    let visualScale = currentZoomScale;
-    if (currentZoomScale < 1.0) visualScale = 1.0; 
-    
-    cameraView.style.transform = `scale(${baseScaleX * visualScale}, ${visualScale})`;
-}
-
 function saveVideoToDB(blob, altitude, recordTime) {
     return new Promise((resolve) => {
         const transaction = db.transaction(["videos"], "readwrite");
@@ -253,12 +183,11 @@ function saveVideoToDB(blob, altitude, recordTime) {
     });
 }
 
-// 🛠️ 원래 잘 작동하던 원본의 깔끔한 구조로 완벽하게 롤백(복구) 완료!
 function deleteVideoFromDB(id) {
     return new Promise((resolve) => {
         const transaction = db.transaction(["videos"], "readwrite");
         const store = transaction.objectStore("videos");
-        const request = store.delete(id); 
+        const request = store.delete(id);
         request.onsuccess = () => resolve();
     });
 }
@@ -287,12 +216,23 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
     newVideo.muted = false; 
     newVideo.playsInline = true;
     newVideo.setAttribute('playsinline', '');
-    newVideo.controls = true;
+    newVideo.controls = false; // 🎯 충돌을 일으키는 브라우저 기본 컨트롤러 제거
     newVideo.loop = true;
+
+    // 🎯 화면 어디를 누르든 재생/일시정지가 직관적으로 되도록 이벤트 추가
+    newVideo.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (newVideo.paused) {
+            newVideo.play().catch(err => console.log(err));
+        } else {
+            newVideo.pause();
+        }
+    });
 
     const newOverlay = document.createElement('div');
     newOverlay.className = 'altitude-overlay';
     newOverlay.innerHTML = `<span>${altitude}</span>`;
+    newOverlay.style.pointerEvents = 'none'; // 터치 방해 금지
 
     const timeOverlay = document.createElement('div');
     timeOverlay.className = 'time-overlay';
@@ -305,6 +245,7 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
     timeOverlay.style.fontFamily = 'system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
     timeOverlay.style.letterSpacing = '-0.3px';
     timeOverlay.style.zIndex = '10';
+    timeOverlay.style.pointerEvents = 'none'; // 터치 방해 금지
 
     const displayTime = recordTime || `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
     timeOverlay.innerHTML = `<span>${displayTime}</span>`;
@@ -323,12 +264,19 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
 
     deleteBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
+        e.preventDefault();
+        
+        // 컨펌 창이 뜨기 전에 비디오를 잠시 일시정지하여 꼬임 방지
+        newVideo.pause();
+
         if (confirm("이 영상을 영구 삭제하시겠습니까?")) {
             await deleteVideoFromDB(id);
             const childrenArray = Array.from(sliderWrapper.children);
             const slideIndex = childrenArray.indexOf(newSlide);
+            
             newSlide.remove();
             totalSlides--;
+            
             if (slideIndex <= currentSlideIndex) {
                 if (currentSlideIndex >= totalSlides) {
                     currentSlideIndex = totalSlides - 1;
@@ -337,6 +285,9 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
                 }
             }
             updateSliderPosition();
+        } else {
+            // 취소를 누르면 다시 스무스하게 재생되도록 처리
+            newVideo.play().catch(err => console.log(err));
         }
     });
 
@@ -389,63 +340,9 @@ function getRealAltitude() {
     });
 }
 
-timerBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    zoomMenu.classList.remove('open'); 
-    timerMenu.classList.toggle('open');
-});
+recordBtn.addEventListener('click', () => {
+    if (!mediaRecorder || mediaRecorder.state === 'recording') return;
 
-zoomBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    timerMenu.classList.remove('open'); 
-    zoomMenu.classList.toggle('open');
-});
-
-document.addEventListener('click', () => {
-    timerMenu.classList.remove('open');
-    zoomMenu.classList.remove('open');
-});
-
-timerOptionBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const secs = parseInt(btn.getAttribute('data-secs'));
-        selectedTimerSeconds = secs;
-
-        if (secs === 0) {
-            timerIconSvg.style.display = 'block';
-            timerBtnText.style.display = 'none';
-            timerClearBtn.classList.add('hide-option');
-            timerClearBtn.style.display = 'none'; 
-        } else {
-            timerIconSvg.style.display = 'none';
-            timerBtnText.innerText = `${secs}s`;
-            timerBtnText.style.display = 'block';
-            timerClearBtn.classList.remove('hide-option');
-            timerClearBtn.style.display = 'block';
-        }
-        timerMenu.classList.remove('open');
-    });
-});
-
-zoomOptionBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const zoomVal = parseFloat(btn.getAttribute('data-zoom'));
-        currentZoomScale = zoomVal;
-
-        zoomBtnText.innerText = `${zoomVal}x`;
-
-        if (cameraView.srcObject) {
-            applyHardwareZoom(cameraView.srcObject, currentZoomScale);
-        }
-        updateCameraTransformStyle();
-
-        zoomMenu.classList.remove('open'); 
-    });
-});
-
-function executionRecord() {
     mediaRecorder.start();
     recordBtn.innerText = "녹화중";
     recordBtn.style.backgroundColor = "gray";
@@ -459,29 +356,6 @@ function executionRecord() {
         recordBtn.style.backgroundColor = "red";
         recordBtn.style.borderColor = "white";
     }, 3000); 
-}
-
-recordBtn.addEventListener('click', () => {
-    if (!mediaRecorder || mediaRecorder.state === 'recording') return;
-    if (recordBtn.innerText.includes("초")) return; 
-
-    if (selectedTimerSeconds > 0) {
-        let timeLeft = selectedTimerSeconds;
-        recordBtn.innerText = `${timeLeft}초`;
-        recordBtn.style.backgroundColor = "orange";
-
-        const countdownInterval = setInterval(() => {
-            timeLeft--;
-            if (timeLeft <= 0) {
-                clearInterval(countdownInterval);
-                executionRecord();
-            } else {
-                recordBtn.innerText = `${timeLeft}초`;
-            }
-        }, 1000);
-    } else {
-        executionRecord();
-    }
 });
 
 switchCameraBtn.addEventListener('click', async () => {
@@ -491,20 +365,45 @@ switchCameraBtn.addEventListener('click', async () => {
 
 let touchStartX = 0;
 let touchEndX = 0;
-document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; });
-document.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); });
-document.addEventListener('mousedown', e => { touchStartX = e.screenX; });
-document.addEventListener('mouseup', e => { touchEndX = e.screenX; handleSwipe(); });
+let touchStartY = 0;
+let touchEndY = 0;
+
+document.addEventListener('touchstart', e => { 
+    touchStartX = e.changedTouches[0].screenX; 
+    touchStartY = e.changedTouches[0].screenY; 
+});
+
+document.addEventListener('touchend', e => { 
+    touchEndX = e.changedTouches[0].screenX; 
+    touchEndY = e.changedTouches[0].screenY; 
+    handleSwipe(); 
+});
+
+document.addEventListener('mousedown', e => { 
+    touchStartX = e.screenX; 
+    touchStartY = e.screenY; 
+});
+
+document.addEventListener('mouseup', e => { 
+    touchEndX = e.screenX; 
+    touchEndY = e.screenY; 
+    handleSwipe(); 
+});
 
 function handleSwipe() {
-    const swipeDistance = touchStartX - touchEndX;
-    if (swipeDistance < -50) {
+    const swipeDistanceX = touchStartX - touchEndX;
+    const swipeDistanceY = touchStartY - touchEndY;
+    
+    // 단순 클릭/터치인데 스와이프로 오작동하는 것을 완벽히 방어
+    if (Math.abs(swipeDistanceX) < 40 || Math.abs(swipeDistanceY) > 60) return;
+
+    if (swipeDistanceX < -50) {
         if (currentSlideIndex > 0) {
             currentSlideIndex--;
             updateSliderPosition();
         }
     }
-    if (swipeDistance > 50) {
+    if (swipeDistanceX > 50) {
         if (currentSlideIndex < totalSlides - 1) {
             currentSlideIndex++;
             updateSliderPosition();
@@ -672,9 +571,6 @@ async function generateTotalLogVideo() {
 }
 
 async function initApp() {
-    timerClearBtn.classList.add('hide-option');
-    timerClearBtn.style.display = 'none';
-
     await initDatabase();
     loadSavedVideos();
     await startCamera();
