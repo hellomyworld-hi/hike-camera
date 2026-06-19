@@ -6,13 +6,29 @@ const cameraPage = document.getElementById('camera-page');
 const switchCameraBtn = document.getElementById('switch-camera-btn');
 const totalDownloadBtn = document.getElementById('total-download-btn');
 
+// 타이머 관련 DOM
+const timerBtn = document.getElementById('timer-btn');
+const timerMenu = document.getElementById('timer-menu');
+const timerIconSvg = document.getElementById('timer-icon-svg');
+const timerBtnText = document.getElementById('timer-btn-text');
+const timerOptionBtns = document.querySelectorAll('.timer-option-btn');
+
+// 배율 관련 DOM
+const zoomBtn = document.getElementById('zoom-btn');
+const zoomMenu = document.getElementById('zoom-menu');
+const zoomBtnText = document.getElementById('zoom-btn-text');
+const zoomOptionBtns = document.querySelectorAll('.zoom-option-btn');
+
 let mediaRecorder;
 let recordedChunks = [];
 let currentSlideIndex = 0;
 let totalSlides = 1;
 
-let currentFacingMode = "user"; // "user"(전면) 또는 "environment"(후면)
+let currentFacingMode = "user"; 
 let db;
+
+let selectedTimerSeconds = 0; 
+let currentZoomScale = 1.0; 
 
 function getSupportedMimeType() {
     const types = [
@@ -74,7 +90,7 @@ function startCameraClock() {
     setInterval(updateClock, 1000);
 }
 
-// 📸 카메라 켜기 함수 (유령 방어막 제거 버전)
+// 📸 카메라 켜기 함수
 async function startCamera() {
     if (cameraView.srcObject) {
         cameraView.srcObject.getTracks().forEach(track => track.stop());
@@ -92,13 +108,9 @@ async function startCamera() {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         cameraView.srcObject = stream;
         
-        if (currentFacingMode === "user") {
-            cameraView.style.transform = "scaleX(-1)";
-        } else {
-            cameraView.style.transform = "scaleX(1)";
-        }
-
-        // ❌ 버튼 클릭을 방해하던 투명 'safariShield' 생성 코드를 완벽하게 도려내어 버튼을 활성화했습니다!
+        // 물리 줌 지원 적용
+        applyHardwareZoom(stream, currentZoomScale);
+        updateCameraTransformStyle();
 
         if (recordBtn) recordBtn.style.zIndex = '30';
         if (switchCameraBtn) switchCameraBtn.style.zIndex = '30';
@@ -125,11 +137,36 @@ async function startCamera() {
             }
 
             ctx.save();
+            
+            // ✨ [보완] 0.5배일 때 화면이 쪼그라들며 여백이 생기는 현상을 캔버스 레벨에서 원천 방지
+            // 배율이 1보다 작아질 때는 크롭을 하지 않고 화면 전체를 그리되 박스에 맞춤 채움 처리
+            let sw = vw;
+            let sh = vh;
+            let sx = 0;
+            let sy = 0;
+
+            if (currentZoomScale > 1.0) {
+                // 2배 확대 시 중심점 크롭 연산
+                sw = vw / currentZoomScale;
+                sh = vh / currentZoomScale;
+                sx = (vw - sw) / 2;
+                sy = (vh - sh) / 2;
+            }
+
             if (currentFacingMode === "user") {
                 ctx.scale(-1, 1);
-                ctx.drawImage(cameraView, -vw, 0, vw, vh);
+                if (currentZoomScale < 1.0) {
+                    // 0.5배 축소 시 여백 없이 꽉 차게 강제 드로잉 처리
+                    ctx.drawImage(cameraView, 0, 0, vw, vh, -vw, 0, vw, vh);
+                } else {
+                    ctx.drawImage(cameraView, sx, sy, sw, sh, -vw, 0, vw, vh);
+                }
             } else {
-                ctx.drawImage(cameraView, 0, 0, vw, vh);
+                if (currentZoomScale < 1.0) {
+                    ctx.drawImage(cameraView, 0, 0, vw, vh, 0, 0, vw, vh);
+                } else {
+                    ctx.drawImage(cameraView, sx, sy, sw, sh, 0, 0, vw, vh);
+                }
             }
             ctx.restore();
             requestAnimationFrame(drawFrame);
@@ -177,6 +214,29 @@ async function startCamera() {
     }
 }
 
+// 하드웨어 물리 줌 조절 제어
+function applyHardwareZoom(stream, zoomValue) {
+    const videoTrack = stream.getVideoTracks()[0];
+    if (videoTrack && typeof videoTrack.getCapabilities === 'function') {
+        const capabilities = videoTrack.getCapabilities();
+        if (capabilities.zoom) {
+            const targetZoom = Math.max(capabilities.zoom.min, Math.min(capabilities.zoom.max, zoomValue));
+            videoTrack.applyConstraints({ advanced: [{ zoom: targetZoom }] })
+                .catch(err => console.log("하드웨어 물리 줌 조절 제어 우회:", err));
+        }
+    }
+}
+
+// 프리뷰 화면 트랜스폼 스타일 새로고침
+function updateCameraTransformStyle() {
+    let baseScaleX = (currentFacingMode === "user") ? -1 : 1;
+    // ✨ 노트북 등 하드웨어 미지원 기기에서 0.5배 지정 시 줌아웃 여백 현상을 화면 레벨에서 제어
+    let visualScale = currentZoomScale;
+    if (currentZoomScale < 1.0) visualScale = 1.0; // CSS 단축으로 쪼그라드는 연출 보정
+    
+    cameraView.style.transform = `scale(${baseScaleX * visualScale}, ${visualScale})`;
+}
+
 function saveVideoToDB(blob, altitude, recordTime) {
     return new Promise((resolve) => {
         const transaction = db.transaction(["videos"], "readwrite");
@@ -216,7 +276,7 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
     const newVideo = document.createElement('video');
     newVideo.src = videoURL;
     newVideo.className = 'saved-video';
-    newVideo.muted = false; // 🔊 웹 슬라이드 확인 화면 소리 정상 출력!
+    newVideo.muted = false; 
     newVideo.playsInline = true;
     newVideo.setAttribute('playsinline', '');
     newVideo.controls = true;
@@ -321,9 +381,64 @@ function getRealAltitude() {
     });
 }
 
-recordBtn.addEventListener('click', () => {
-    if (!mediaRecorder || mediaRecorder.state === 'recording') return;
+// 타이머 클릭 이벤트
+timerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    zoomMenu.classList.remove('open'); 
+    timerMenu.classList.toggle('open');
+});
 
+// 배율 클릭 이벤트 리스너
+zoomBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    timerMenu.classList.remove('open'); 
+    zoomMenu.classList.toggle('open');
+});
+
+document.addEventListener('click', () => {
+    timerMenu.classList.remove('open');
+    zoomMenu.classList.remove('open');
+});
+
+// 타이머 옵션 세팅 
+timerOptionBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const secs = parseInt(btn.getAttribute('data-secs'));
+        selectedTimerSeconds = secs;
+
+        if (secs === 0) {
+            timerIconSvg.style.display = 'block';
+            timerBtnText.style.display = 'none';
+        } else {
+            timerIconSvg.style.display = 'none';
+            timerBtnText.innerText = `${secs}s`;
+            timerBtnText.style.display = 'block';
+        }
+        timerMenu.classList.remove('open');
+    });
+});
+
+// 배율 옵션 선택 시 실행 로직
+zoomOptionBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const zoomVal = parseFloat(btn.getAttribute('data-zoom'));
+        currentZoomScale = zoomVal;
+
+        zoomBtnText.innerText = `${zoomVal}x`;
+
+        if (cameraView.srcObject) {
+            applyHardwareZoom(cameraView.srcObject, currentZoomScale);
+        }
+        updateCameraTransformStyle();
+
+        zoomMenu.classList.remove('open'); 
+    });
+});
+
+// 진짜 녹화 실행 래퍼
+function executionRecord() {
     mediaRecorder.start();
     recordBtn.innerText = "녹화중";
     recordBtn.style.backgroundColor = "gray";
@@ -337,6 +452,29 @@ recordBtn.addEventListener('click', () => {
         recordBtn.style.backgroundColor = "red";
         recordBtn.style.borderColor = "white";
     }, 3000); 
+}
+
+recordBtn.addEventListener('click', () => {
+    if (!mediaRecorder || mediaRecorder.state === 'recording') return;
+    if (recordBtn.innerText.includes("초")) return; 
+
+    if (selectedTimerSeconds > 0) {
+        let timeLeft = selectedTimerSeconds;
+        recordBtn.innerText = `${timeLeft}초`;
+        recordBtn.style.backgroundColor = "orange";
+
+        const countdownInterval = setInterval(() => {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                clearInterval(countdownInterval);
+                executionRecord();
+            } else {
+                recordBtn.innerText = `${timeLeft}초`;
+            }
+        }, 1000);
+    } else {
+        executionRecord();
+    }
 });
 
 switchCameraBtn.addEventListener('click', async () => {
@@ -367,9 +505,6 @@ function handleSwipe() {
     }
 }
 
-// ==========================================
-// 🚀 다운로드 시스템 (아이폰 17용 위아래 크롭 비율 완벽 보정 버전)
-// ==========================================
 totalDownloadBtn.addEventListener('click', generateTotalLogVideo);
 
 async function generateTotalLogVideo() {
@@ -388,7 +523,6 @@ async function generateTotalLogVideo() {
         totalDownloadBtn.innerText = "⏳ 등산 log 제작 중...";
 
         const canvas = document.createElement('canvas');
-        // 🎯 최종 결과물은 깔끔한 정석 9:16 비율(720x1280)로 고정합니다.
         canvas.width = 720;
         canvas.height = 1280;
         const ctx = canvas.getContext('2d');
@@ -458,12 +592,11 @@ async function generateTotalLogVideo() {
 
         canvasRecorder.start();
 
-        // 🎯 [핵심 수식] 길쭉한 원본 이미지에서 인스타용 9:16 구역만 크롭하기 위한 계산
         const targetRatio = 1280 / 720; 
         const sourceWidth = bgImg.width;
         const sourceHeight = sourceWidth * targetRatio; 
         const sourceX = 0;
-        const sourceY = (bgImg.height - sourceHeight) / 2; // 중앙 정렬로 위아래 자르기
+        const sourceY = (bgImg.height - sourceHeight) / 2;
 
         for (const item of savedList) {
             hiddenVideo.src = URL.createObjectURL(item.videoBlob);
@@ -474,7 +607,6 @@ async function generateTotalLogVideo() {
             hiddenVideo.onended = () => { isCurrentVideoPlaying = false; };
 
             while (isCurrentVideoPlaying) {
-                // ✂️ 이 부분이 핵심입니다! 강제로 압축하지 않고 위아래를 크롭해서 9:16을 채웁니다.
                 ctx.drawImage(bgImg, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
 
                 const containerWidth = canvas.width * 0.85; 
