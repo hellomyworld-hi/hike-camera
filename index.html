@@ -25,6 +25,32 @@
 
                         <button id="record-btn">REC</button>
 
+                        <div class="zoom-container">
+                            <div class="zoom-menu" id="zoom-menu">
+                                <button class="zoom-option-btn" data-zoom="0.5">0.5x</button>
+                                <button class="zoom-option-btn" data-zoom="1">1x</button>
+                                <button class="zoom-option-btn" data-zoom="2">2x</button>
+                            </div>
+                            <button id="zoom-btn" aria-label="카메라 배율 조절">
+                                <span id="zoom-btn-text">1x</span>
+                            </button>
+                        </div>
+
+                        <div class="timer-container">
+                            <div class="timer-menu" id="timer-menu">
+                                <button class="timer-option-btn" data-secs="0">해제</button>
+                                <button class="timer-option-btn" data-secs="5">5s</button>
+                                <button class="timer-option-btn" data-secs="10">10s</button>
+                            </div>
+                            <button id="timer-btn" aria-label="타이머 설정">
+                                <svg id="timer-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                <span id="timer-btn-text" style="display: none; font-size: 11px; font-weight: bold;"></span>
+                            </button>
+                        </div>
+
                         <button id="switch-camera-btn" aria-label="카메라 전환">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.73-.73"/>
