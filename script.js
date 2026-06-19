@@ -24,7 +24,7 @@ const zoom05Btn = document.getElementById('zoom-05-btn');
 let mediaRecorder;
 let recordedChunks = [];
 let currentSlideIndex = 0;
-let totalSlides = 1;
+let totalSlides = 1; // 기본 카메라 페이지(1개)
 
 let currentFacingMode = "user"; 
 let db;
@@ -99,15 +99,14 @@ async function startCamera() {
         cameraView.srcObject = null;
     }
 
-    // 전면 카메라일 때는 0.5x 옵션 숨기기 & 선택되어 있었다면 1x로 강제 초기화
     if (currentFacingMode === "user") {
-        zoom05Btn.classList.add('hide-option');
+        if (zoom05Btn) zoom05Btn.classList.add('hide-option');
         if (currentZoomScale === 0.5) {
             currentZoomScale = 1.0;
-            zoomBtnText.innerText = '1x';
+            if (zoomBtnText) zoomBtnText.innerText = '1x';
         }
     } else {
-        zoom05Btn.classList.remove('hide-option');
+        if (zoom05Btn) zoom05Btn.classList.remove('hide-option');
     }
 
     try {
@@ -235,6 +234,7 @@ function applyHardwareZoom(stream, zoomValue) {
 }
 
 function updateCameraTransformStyle() {
+    if (!cameraView) return;
     let baseScaleX = (currentFacingMode === "user") ? -1 : 1;
     let visualScale = currentZoomScale;
     if (currentZoomScale < 1.0) visualScale = 1.0; 
@@ -261,18 +261,22 @@ function deleteVideoFromDB(id) {
 }
 
 function loadSavedVideos() {
-    const transaction = db.transaction(["videos"], "readonly");
-    const store = transaction.objectStore("videos");
-    const request = store.getAll();
-    request.onsuccess = function(e) {
-        const savedList = e.target.result;
-        savedList.forEach(item => {
-            addVideoSlideToUI(item.videoBlob, item.altitudeText, item.id, item.recordTime);
-        });
-    };
+    return new Promise((resolve) => {
+        const transaction = db.transaction(["videos"], "readonly");
+        const store = transaction.objectStore("videos");
+        const request = store.getAll();
+        request.onsuccess = function(e) {
+            const savedList = e.target.result;
+            savedList.forEach(item => {
+                addVideoSlideToUI(item.videoBlob, item.altitudeText, item.id, item.recordTime, false);
+            });
+            resolve();
+        };
+    });
 }
 
-function addVideoSlideToUI(blob, altitude, id, recordTime) {
+// autoMove 파라미터를 추가해 초기 로딩 시 슬라이더 포지션이 꼬이지 않게 함
+function addVideoSlideToUI(blob, altitude, id, recordTime, autoMove = true) {
     const videoURL = URL.createObjectURL(blob);
     const newSlide = document.createElement('div');
     newSlide.className = 'slide-page';
@@ -284,12 +288,23 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
     newVideo.muted = false; 
     newVideo.playsInline = true;
     newVideo.setAttribute('playsinline', '');
-    newVideo.controls = true;
+    newVideo.controls = false; // 🎯 터치 오작동을 유발하는 브라우저 기본 컨트롤러 제거
     newVideo.loop = true;
+
+    // 🎯 화면 어디든 터치/클릭하면 직관적으로 재생/일시정지가 토글되도록 변경
+    newVideo.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (newVideo.paused) {
+            newVideo.play().catch(err => console.log(err));
+        } else {
+            newVideo.pause();
+        }
+    });
 
     const newOverlay = document.createElement('div');
     newOverlay.className = 'altitude-overlay';
     newOverlay.innerHTML = `<span>${altitude}</span>`;
+    newOverlay.style.pointerEvents = 'none'; // 터치 방해 금지
 
     const timeOverlay = document.createElement('div');
     timeOverlay.className = 'time-overlay';
@@ -302,6 +317,7 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
     timeOverlay.style.fontFamily = 'system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
     timeOverlay.style.letterSpacing = '-0.3px';
     timeOverlay.style.zIndex = '10';
+    timeOverlay.style.pointerEvents = 'none'; // 터치 방해 금지
 
     const displayTime = recordTime || `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
     timeOverlay.innerHTML = `<span>${displayTime}</span>`;
@@ -320,6 +336,10 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
 
     deleteBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
+        e.preventDefault();
+        
+        newVideo.pause(); // 컨펌 전 일시정지하여 꼬임 방지
+
         if (confirm("이 영상을 영구 삭제하시겠습니까?")) {
             await deleteVideoFromDB(id);
             const childrenArray = Array.from(sliderWrapper.children);
@@ -334,6 +354,8 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
                 }
             }
             updateSliderPosition();
+        } else {
+            newVideo.play().catch(err => console.log(err));
         }
     });
 
@@ -346,8 +368,10 @@ function addVideoSlideToUI(blob, altitude, id, recordTime) {
     sliderWrapper.insertBefore(newSlide, cameraPage);
 
     totalSlides++;
-    currentSlideIndex++;
-    updateSliderPosition();
+    if (autoMove) {
+        currentSlideIndex++;
+        updateSliderPosition();
+    }
 
     sliderWrapper.offsetHeight;
     sliderWrapper.style.transition = 'transform 0.3s ease-out';
@@ -387,25 +411,29 @@ function getRealAltitude() {
 }
 
 // 타이머 클릭 이벤트
-timerBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    zoomMenu.classList.remove('open'); 
-    timerMenu.classList.toggle('open');
-});
+if (timerBtn) {
+    timerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (zoomMenu) zoomMenu.classList.remove('open'); 
+        if (timerMenu) timerMenu.classList.toggle('open');
+    });
+}
 
 // 배율 클릭 이벤트 리스너
-zoomBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    timerMenu.classList.remove('open'); 
-    zoomMenu.classList.toggle('open');
-});
+if (zoomBtn) {
+    zoomBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (timerMenu) timerMenu.classList.remove('open'); 
+        if (zoomMenu) zoomMenu.classList.toggle('open');
+    });
+}
 
 document.addEventListener('click', () => {
-    timerMenu.classList.remove('open');
-    zoomMenu.classList.remove('open');
+    if (timerMenu) timerMenu.classList.remove('open');
+    if (zoomMenu) zoomMenu.classList.remove('open');
 });
 
-// 🕒 타이머 옵션 세팅 (모바일 환경 강제 주입 로직 완비)
+// 🕒 타이머 옵션 세팅
 timerOptionBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -413,20 +441,24 @@ timerOptionBtns.forEach(btn => {
         selectedTimerSeconds = secs;
 
         if (secs === 0) {
-            timerIconSvg.style.display = 'block';
-            timerBtnText.style.display = 'none';
-            // 해제 버튼 완전 은닉
-            timerClearBtn.classList.add('hide-option');
-            timerClearBtn.style.display = 'none'; 
+            if (timerIconSvg) timerIconSvg.style.display = 'block';
+            if (timerBtnText) timerBtnText.style.display = 'none';
+            if (timerClearBtn) {
+                timerClearBtn.classList.add('hide-option');
+                timerClearBtn.style.display = 'none'; 
+            }
         } else {
-            timerIconSvg.style.display = 'none';
-            timerBtnText.innerText = `${secs}s`;
-            timerBtnText.style.display = 'block';
-            // 5초, 10초 설정 시 해제 옵션 오픈 활성화
-            timerClearBtn.classList.remove('hide-option');
-            timerClearBtn.style.display = 'block';
+            if (timerIconSvg) timerIconSvg.style.display = 'none';
+            if (timerBtnText) {
+                timerBtnText.innerText = `${secs}s`;
+                timerBtnText.style.display = 'block';
+            }
+            if (timerClearBtn) {
+                timerClearBtn.classList.remove('hide-option');
+                timerClearBtn.style.display = 'block';
+            }
         }
-        timerMenu.classList.remove('open');
+        if (timerMenu) timerMenu.classList.remove('open');
     });
 });
 
@@ -437,14 +469,14 @@ zoomOptionBtns.forEach(btn => {
         const zoomVal = parseFloat(btn.getAttribute('data-zoom'));
         currentZoomScale = zoomVal;
 
-        zoomBtnText.innerText = `${zoomVal}x`;
+        if (zoomBtnText) zoomBtnText.innerText = `${zoomVal}x`;
 
-        if (cameraView.srcObject) {
+        if (cameraView && cameraView.srcObject) {
             applyHardwareZoom(cameraView.srcObject, currentZoomScale);
         }
         updateCameraTransformStyle();
 
-        zoomMenu.classList.remove('open'); 
+        if (zoomMenu) zoomMenu.classList.remove('open'); 
     });
 });
 
@@ -494,20 +526,42 @@ switchCameraBtn.addEventListener('click', async () => {
 
 let touchStartX = 0;
 let touchEndX = 0;
-document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; });
-document.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); });
-document.addEventListener('mousedown', e => { touchStartX = e.screenX; });
-document.addEventListener('mouseup', e => { touchEndX = e.screenX; handleSwipe(); });
+let touchStartY = 0;
+let touchEndY = 0;
+
+document.addEventListener('touchstart', e => { 
+    touchStartX = e.changedTouches[0].screenX; 
+    touchStartY = e.changedTouches[0].screenY;
+});
+document.addEventListener('touchend', e => { 
+    touchEndX = e.changedTouches[0].screenX; 
+    touchEndY = e.changedTouches[0].screenY;
+    handleSwipe(); 
+});
+document.addEventListener('mousedown', e => { 
+    touchStartX = e.screenX; 
+    touchStartY = e.screenY;
+});
+document.addEventListener('mouseup', e => { 
+    touchEndX = e.screenX; 
+    touchEndY = e.screenY;
+    handleSwipe(); 
+});
 
 function handleSwipe() {
-    const swipeDistance = touchStartX - touchEndX;
-    if (swipeDistance < -50) {
+    const swipeDistanceX = touchStartX - touchEndX;
+    const swipeDistanceY = touchStartY - touchEndY;
+    
+    // 단순 클릭을 터치 스와이프로 감지해 버리는 현상 방어 완비
+    if (Math.abs(swipeDistanceX) < 40 || Math.abs(swipeDistanceY) > 60) return;
+
+    if (swipeDistanceX < -50) {
         if (currentSlideIndex > 0) {
             currentSlideIndex--;
             updateSliderPosition();
         }
     }
-    if (swipeDistance > 50) {
+    if (swipeDistanceX > 50) {
         if (currentSlideIndex < totalSlides - 1) {
             currentSlideIndex++;
             updateSliderPosition();
@@ -674,16 +728,28 @@ async function generateTotalLogVideo() {
     };
 }
 
-// 🛠️ 초기 구동 시스템 세팅 (해제 차단 강제 초기화 추가)
+// 🛠️ 초기 구동 시스템 순서 완벽 정렬
 async function initApp() {
-    // 앱 실행 첫 순간 해제 버튼 숨기기 보장
-    timerClearBtn.classList.add('hide-option');
-    timerClearBtn.style.display = 'none';
+    if (timerClearBtn) {
+        timerClearBtn.classList.add('hide-option');
+        timerClearBtn.style.display = 'none';
+    }
 
     await initDatabase();
-    loadSavedVideos();
-    await startCamera();
+    await loadSavedVideos(); // 1. 먼저 저장된 비디오를 정직하게 로드하고
+    
+    currentSlideIndex = totalSlides - 1; // 2. 현재 활성화 슬라이드 번호를 카메라 페이지로 정확히 맞춤
+    
+    await startCamera(); // 3. 그 다음에 카메라를 완전 구동
     startCameraClock(); 
+    
+    if (sliderWrapper) {
+        sliderWrapper.style.transition = 'none';
+        updateSliderPosition(); // 4. 슬라이더 위치를 까만 화면이 아닌 카메라 페이지로 픽스
+        sliderWrapper.offsetHeight;
+        sliderWrapper.style.transition = 'transform 0.3s ease-out';
+    }
+
     altitudeText.innerText = "⛰️ 초기 고도 측정 중...";
     getRealAltitude();
 }
