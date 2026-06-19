@@ -152,36 +152,38 @@ body, html {
     z-index: 20;
 }
 
-/* 🛠️ 타이머 메뉴 네모창 가로길이 자동 조절 및 애니메이션 보완 */
-.timer-menu {
-    width: 0;
+/* 🛠️ 슬라이드식 슬롯 메뉴 공통 스타일 보완 (PC/모바일 강제 노출 버그 해결) */
+.timer-menu, .zoom-menu {
     max-width: 0;
     opacity: 0;
     overflow: hidden;
     background-color: rgba(0, 0, 0, 0.75);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 6px;
-    display: flex !important;
+    display: inline-flex; /* flex !important 대신 안정적인 inline-flex 사용 */
     flex-direction: row;
-    justify-content: flex-end; /* 오른쪽 정렬 */
+    justify-content: flex-end; 
     align-items: center;
     gap: 8px;
     padding: 0;
     margin-right: 0;
     white-space: nowrap;
+    pointer-events: none; /* 닫혀있을 때는 클릭 안 되게 방지 */
     transition: max-width 0.3s ease-out, opacity 0.2s ease-out, padding 0.3s ease-out, margin-right 0.3s ease-out;
 }
 
-/* 타이머 메뉴 활성화 상태 (최대 폭 유연하게 설정) */
-.timer-menu.open {
+/* 🛠️ 메뉴 활성화 상태 클래스 (텍스트 양에 맞게 폭이 쏙 줄어들도록 셋팅) */
+.timer-menu.open, .zoom-menu.open {
     width: max-content !important;
-    max-width: 140px; 
+    max-width: 160px; /* 해제가 떴을 때 늘어날 수 있는 충분한 임계값 */
     opacity: 1;
     padding: 6px 10px !important;
     margin-right: 6px;
+    pointer-events: auto; /* 열렸을 때만 클릭 허용 */
 }
 
-/* 해제 버튼 숨기기용 클래스 (배율과 공유하거나 추가) */
+/* 전면카메라 0.5x 및 타이머 '해제' 연동 제어 클래스 */
+.zoom-option-btn.hide-option,
 .timer-option-btn.hide-option {
     display: none !important;
 }
