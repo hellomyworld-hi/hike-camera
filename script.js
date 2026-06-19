@@ -32,7 +32,7 @@ let db;
 let selectedTimerSeconds = 0; 
 let currentZoomScale = 1.0; 
 
-// ✨ [보완] 모바일 기기가 오디오를 유실하지 않도록 통합 고음질 코덱 지정 명시
+// ✨ 모바일 기기가 오디오를 유실하지 않도록 통합 고음질 코덱 지정 명시
 function getSupportedMimeType() {
     const types = [
         'video/mp4;codecs=avc1,mp4a.40.2', 
@@ -188,7 +188,6 @@ async function startCamera() {
         const flippedVideoTrack = canvasStream.getVideoTracks()[0];
         const audioTracks = stream.getAudioTracks();
 
-        // ✨ [보완] 모바일 브라우저 결합 규격을 맞추기 위해 트랙 배열 형태로 미디어 스트림 결합 초기화
         const tracksToCombine = [flippedVideoTrack];
         if (audioTracks.length > 0) {
             tracksToCombine.push(audioTracks[0]);
@@ -254,11 +253,13 @@ function saveVideoToDB(blob, altitude, recordTime) {
     });
 }
 
+// 🛠️ 변수 중복 선언 및 가두기 오타 완벽 보정함 (store = store = 구조 타파)
 function deleteVideoFromDB(id) {
     return new Promise((resolve) => {
         const transaction = db.transaction(["videos"], "readwrite");
-        const store = store = transaction.objectStore("videos");
-        const request = store.delete(id);
+        const store = transaction.objectStore("videos");
+        // 확실히 정수화(Number)하여 IndexedDB 검색 트랙 일치 보장
+        const request = store.delete(Number(id));
         request.onsuccess = () => resolve();
     });
 }
