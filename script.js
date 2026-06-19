@@ -12,7 +12,7 @@ const timerMenu = document.getElementById('timer-menu');
 const timerIconSvg = document.getElementById('timer-icon-svg');
 const timerBtnText = document.getElementById('timer-btn-text');
 const timerOptionBtns = document.querySelectorAll('.timer-option-btn');
-const timerClearBtn = document.getElementById('timer-clear-btn'); // ✨ 해제 버튼 가져오기
+const timerClearBtn = document.getElementById('timer-clear-btn'); 
 
 // 배율 관련 DOM
 const zoomBtn = document.getElementById('zoom-btn');
@@ -405,7 +405,7 @@ document.addEventListener('click', () => {
     zoomMenu.classList.remove('open');
 });
 
-// 🕒 타이머 옵션 세팅 (해제 기능 및 가로폭 유기적 제어 추가)
+// 🕒 타이머 옵션 세팅 (모바일 환경 강제 주입 로직 완비)
 timerOptionBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -413,16 +413,18 @@ timerOptionBtns.forEach(btn => {
         selectedTimerSeconds = secs;
 
         if (secs === 0) {
-            // '해제'를 눌렀을 때 기본 상태로 복원
             timerIconSvg.style.display = 'block';
             timerBtnText.style.display = 'none';
-            timerClearBtn.classList.add('hide-option'); // 기본 상태이므로 해제 버튼 다시 숨김
+            // 해제 버튼 완전 은닉
+            timerClearBtn.classList.add('hide-option');
+            timerClearBtn.style.display = 'none'; 
         } else {
-            // 5초나 10초가 설정되었을 때
             timerIconSvg.style.display = 'none';
             timerBtnText.innerText = `${secs}s`;
             timerBtnText.style.display = 'block';
-            timerClearBtn.classList.remove('hide-option'); // 타이머가 작동 중이므로 다음 오픈 때 '해제' 노출
+            // 5초, 10초 설정 시 해제 옵션 오픈 활성화
+            timerClearBtn.classList.remove('hide-option');
+            timerClearBtn.style.display = 'block';
         }
         timerMenu.classList.remove('open');
     });
@@ -672,7 +674,12 @@ async function generateTotalLogVideo() {
     };
 }
 
+// 🛠️ 초기 구동 시스템 세팅 (해제 차단 강제 초기화 추가)
 async function initApp() {
+    // 앱 실행 첫 순간 해제 버튼 숨기기 보장
+    timerClearBtn.classList.add('hide-option');
+    timerClearBtn.style.display = 'none';
+
     await initDatabase();
     loadSavedVideos();
     await startCamera();
