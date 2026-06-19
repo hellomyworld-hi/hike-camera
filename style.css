@@ -13,6 +13,7 @@ body, html {
     font-family: sans-serif;
 }
 
+/* ✨ 최신 폰 위아래 빈 여백에 노란 종이 질감을 채워주는 진짜 바닥 도화지 */
 .full-screen-bg {
     width: 100vw;
     height: 100vh;
@@ -141,7 +142,7 @@ body, html {
     z-index: 20;
 }
 
-/* 🔍 [추가] 배율 컨테이너 (타이머 컨테이너 위에 정확히 적층) */
+/* 🔍 배율 컨테이너 (타이머 컨테이너 위에 정확히 적층) */
 .zoom-container {
     position: absolute;
     bottom: 96px; /* 타이머 버튼 위쪽 */
@@ -151,27 +152,32 @@ body, html {
     z-index: 20;
 }
 
-/* 슬라이드식 슬롯 메뉴 공통 스타일 */
+/* 🛠️ [보완] 슬라이드식 슬롯 메뉴 공통 스타일 및 자동 가로길이 적용 */
 .timer-menu, .zoom-menu {
     width: 0;
+    max-width: 0; /* 부드러운 애니메이션 처리를 위해 추가 */
     opacity: 0;
     overflow: hidden;
     background-color: rgba(0, 0, 0, 0.75);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 6px;
-    display: flex;
+    display: flex !important;
+    flex-direction: row;
+    justify-content: flex-end; /* 오른쪽 정렬 고정 */
     align-items: center;
     gap: 8px;
     padding: 0;
     margin-right: 0;
-    transition: width 0.3s ease-out, opacity 0.2s ease-out, padding 0.3s ease-out, margin-right 0.3s ease-out;
+    white-space: nowrap; /* 텍스트가 줄바꿈되어 깨지는 현상 방지 */
+    transition: max-width 0.3s ease-out, opacity 0.2s ease-out, padding 0.3s ease-out, margin-right 0.3s ease-out;
 }
 
-/* 활성화 상태 클래스 */
+/* 🛠️ [보완] 메뉴 활성화 상태 클래스 (버튼 개수에 맞게 유연하게 열리도록 보완) */
 .timer-menu.open, .zoom-menu.open {
-    width: 125px;
+    width: max-content !important; /* 내부 버튼 크기에 맞게 네모창 가로길이 자동 축소 */
+    max-width: 140px; /* 열릴 수 있는 최대 임계값 설정 */
     opacity: 1;
-    padding: 4px 8px;
+    padding: 6px 10px !important;
     margin-right: 6px;
 }
 
@@ -287,4 +293,9 @@ body > div[class*="Safari"] #total-download-btn,
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
+}
+
+/* ✨ 전면 카메라일 때 0.5x 버튼을 완전히 제거하여 공간을 차지하지 않게 함 */
+.zoom-option-btn.hide-option {
+    display: none !important;
 }
