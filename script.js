@@ -870,169 +870,188 @@ function updateSliderPosition() {
 }
 
 async function generateTotalLogVideo() {
-    if (!totalDownloadBtn) return;
-    const transaction = db.transaction(["videos"], "readonly");
-    const store = transaction.objectStore("videos");
-    const request = store.getAll();
-    request.onsuccess = async function(e) {
-        let items = e.target.result || [];
-        if (currentProject) {
-            items = items.filter(item => item.projectid === currentProject.id);
-        }
-        if (!items || items.length === 0) {
-            alert("아직 저장된 고도필름이 없습니다. \n먼저 영상을 촬영해 주세요!");
-            return;
-        }
-        const originalBtnText = totalDownloadBtn.innerHTML;
-        totalDownloadBtn.innerText = "🎞️ 고도필름 제작 중...";
-        totalDownloadBtn.disabled = true;
-        try {
-            const canvas = document.createElement('canvas');
-            canvas.width = 1080;
-            canvas.height = 1920;
-            const ctx = canvas.getContext('2d');
-            const canvasStream = canvas.captureStream(30);
-            const mimeType = getSupportedMimeType();
-            const options = mimeType ? { mimeType } : {};
-            const canvasRecorder = new MediaRecorder(canvasStream, options);
-            const chunks = [];
-            
-            canvasRecorder.ondataavailable = (ev) => {
-                if (ev.data.size > 0) chunks.push(ev.data);
-            };
-            
-            canvasRecorder.onstop = () => {
-                const resultBlob = new Blob(chunks, { type: canvasRecorder.mimeType || 'video/mp4' });
-                const downloadUrl = URL.createObjectURL(resultBlob);
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = now.getMonth() + 1; 
-                const day = now.getDate();
-                const fileName = `${year}년 ${month}월 ${day}일의 고도필름.mp4`;
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(downloadUrl);
-                totalDownloadBtn.innerHTML = originalBtnText;
-                totalDownloadBtn.disabled = false;
-            };
-            
-            canvasRecorder.start();
-            
-            const bgImg = new Image(); 
-            let logBgUrl = "my-background.png";
-            if (currentProject && availableDesigns[currentProject.mountain] && availableDesigns[currentProject.mountain][currentProject.design]) {
-                logBgUrl = availableDesigns[currentProject.mountain][currentProject.design];
-            }
-            bgImg.src = logBgUrl;
-            await new Promise((resolve) => {
-                bgImg.onload = resolve;
-                bgImg.onerror = resolve;
-            });
+  if (!totalDownloadBtn) return;
+  
+  const transaction = db.transaction(["videos"], "readonly");
+  const store = transaction.objectStore("videos");
+  const request = store.getAll();
+  
+  request.onsuccess = async function(e) {
+    let items = e.target.result || [];
+    if (currentProject) {
+      items = items.filter(item => item.projectid === currentProject.id);
+    }
+    if (!items || items.length === 0) {
+      alert("아직 저장된 고도필름이 없습니다. \n먼저 영상을 촬영해 주세요!");
+      return;
+    }
 
-            let bgSx = 0, bgSy = 0, bgSw = bgImg.naturalWidth, bgSh = bgImg.naturalHeight;
-            if (bgImg.complete && bgImg.naturalWidth !== 0) {
-                const canvasRatio = canvas.width / canvas.height; 
-                const imgRatio = bgImg.naturalWidth / bgImg.naturalHeight;
-                if (imgRatio > canvasRatio) {
-                    bgSw = bgImg.naturalHeight * canvasRatio;
-                    bgSx = (bgImg.naturalWidth - bgSw) / 2;
-                } else {
-                    bgSh = bgImg.naturalWidth / canvasRatio;
-                    bgSy = (bgImg.naturalHeight - bgSh) / 2;
-                }
-            }
+    const originalBtnText = totalDownloadBtn.innerHTML;
+    totalDownloadBtn.innerText = "🎞️고도필름 제작 중... (0%)";
+    totalDownloadBtn.disabled = true;
 
-            for (let i = 0; i < items.length; i++) {
-                const item = items[i];
-                const hiddenVideo = document.createElement('video');
-                hiddenVideo.src = URL.createObjectURL(item.videoBlob);
-                hiddenVideo.muted = true;
-                hiddenVideo.playsInline = true;
-                
-                await new Promise((resolve) => {
-                    hiddenVideo.onloadeddata = resolve;
-                });
-                await hiddenVideo.play();
-                
-                const containerWidth = 960;
-                const containerHeight = 540;
-                const videoX = (canvas.width - containerWidth) / 2;
-                const videoY = (canvas.height - containerHeight) / 2; 
-                
-                while (!hiddenVideo.ended && !hiddenVideo.paused) {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    
-                    if (bgImg.complete && bgImg.naturalWidth !== 0) {
-                        ctx.drawImage(bgImg, bgSx, bgSy, bgSw, bgSh, 0, 0, canvas.width, canvas.height);
-                    } else {
-                        ctx.fillStyle = "#1c1c1e";
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    }
-                    
-                    const targetRatio = containerWidth / containerHeight;
-                    const videoRatio = hiddenVideo.videoWidth / hiddenVideo.videoHeight;
-                    let drawWidth, drawHeight;
-                    
-                    if (videoRatio > targetRatio) {
-                        drawHeight = containerHeight;
-                        drawWidth = containerHeight * videoRatio;
-                    } else {
-                        drawWidth = containerWidth;
-                        drawHeight = containerWidth / videoRatio;
-                    }
-                    
-                    const offsetX = videoX - (drawWidth - containerWidth) / 2;
-                    const offsetY = videoY - (drawHeight - containerHeight) / 2;
-                    
-                    ctx.save();
-                    ctx.beginPath();
-                    if (ctx.roundRect) {
-                        ctx.roundRect(videoX, videoY, containerWidth, containerHeight, 20);
-                    } else {
-                        ctx.rect(videoX, videoY, containerWidth, containerHeight); 
-                    }
-                    ctx.clip();
-                    
-                    if ((item.facingMode || "user") === "user") {
-                        ctx.translate(videoX + containerWidth / 2, 0);
-                        ctx.scale(-1, 1);
-                        ctx.translate(-(videoX + containerWidth / 2), 0);
-                    }
-                    ctx.drawImage(hiddenVideo, offsetX, offsetY, drawWidth, drawHeight);
-                    ctx.restore();
-                    
-                    ctx.fillStyle = "white";
-                    ctx.font = "600 41px -apple-system, sans-serif";
-                    ctx.textAlign = "left";
-                    ctx.textBaseline = "top";
-                    ctx.fillText(item.recordTime || "00:00", videoX + 18, videoY + 18);
-                    
-                    ctx.font = "bold 46px -apple-system, sans-serif";
-                    ctx.textBaseline = "middle";
-                    const cleanText = (item.altitudeText || "해발 0m").trim();
-                    const totalContentWidth = 31 + 9 + ctx.measureText(cleanText).width;
-                    const startX = (canvas.width - totalContentWidth) / 2;
-                    ctx.fillText(cleanText, startX + 40, videoY + (containerHeight / 2));
-                    
-                    await new Promise(requestAnimationFrame);
-                }
-                URL.revokeObjectURL(hiddenVideo.src);
-                hiddenVideo.remove();
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 300));
-            canvasRecorder.stop();
-        } catch (err) {
-            console.error("전체 영상 생성 에러:", err);
-            alert("동영상 생성을 실패했습니다.");
-            totalDownloadBtn.innerHTML = originalBtnText;
-            totalDownloadBtn.disabled = false;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1920;
+      const ctx = canvas.getContext('2d');
+      const canvasStream = canvas.captureStream(30);
+      const mimeType = getSupportedMimeType();
+      const options = mimeType ? { mimeType } : {};
+      const canvasRecorder = new MediaRecorder(canvasStream, options);
+      const chunks = [];
+
+      canvasRecorder.ondataavailable = (ev) => {
+        if (ev.data.size > 0) chunks.push(ev.data);
+      };
+
+      canvasRecorder.onstop = () => {
+        const resultBlob = new Blob(chunks, { type: canvasRecorder.mimeType || 'video/mp4' });
+        const downloadUrl = URL.createObjectURL(resultBlob);
+        const now = new Date();
+        const fileName = `\${now.getFullYear()}년 \${now.getMonth() + 1}월 \${now.getDate()}일의 고도필름.mp4`;
+        
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        URL.revokeObjectURL(downloadUrl);
+        totalDownloadBtn.innerHTML = originalBtnText;
+        totalDownloadBtn.disabled = false;
+      };
+
+      canvasRecorder.start();
+
+      const bgImg = new Image();
+      let logBgUrl = "my-background.png";
+      if (currentProject && availableDesigns[currentProject.mountain] && availableDesigns[currentProject.mountain][currentProject.design]) {
+        logBgUrl = availableDesigns[currentProject.mountain][currentProject.design];
+      }
+      bgImg.src = logBgUrl;
+      await new Promise((resolve) => { bgImg.onload = resolve; bgImg.onerror = resolve; });
+
+      let bgSx = 0, bgSy = 0, bgSw = bgImg.naturalWidth, bgSh = bgImg.naturalHeight;
+      if (bgImg.complete && bgImg.naturalWidth !== 0) {
+        const canvasRatio = canvas.width / canvas.height;
+        const imgRatio = bgImg.naturalWidth / bgImg.naturalHeight;
+        if (imgRatio > canvasRatio) {
+          bgSw = bgImg.naturalHeight * canvasRatio;
+          bgSx = (bgImg.naturalWidth - bgSw) / 2;
+        } else {
+          bgSh = bgImg.naturalWidth / canvasRatio;
+          bgSy = (bgImg.naturalHeight - bgSh) / 2;
         }
-    };
+      }
+
+      // 🎬 비디오 루프 시작
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const hiddenVideo = document.createElement('video');
+        hiddenVideo.src = URL.createObjectURL(item.videoBlob);
+        hiddenVideo.muted = true;
+        hiddenVideo.playsInline = true;
+
+        // 💡 [핵심 최적화] 스마트폰 브라우저가 영상을 멈추지 않도록 invisible 형태로 DOM에 강제 부착!
+        hiddenVideo.style.position = 'fixed';
+        hiddenVideo.style.top = '0';
+        hiddenVideo.style.left = '0';
+        hiddenVideo.style.width = '1px';
+        hiddenVideo.style.height = '1px';
+        hiddenVideo.style.opacity = '0.01';
+        hiddenVideo.style.pointerEvents = 'none';
+        document.body.appendChild(hiddenVideo);
+
+        await new Promise((resolve) => { hiddenVideo.onloadeddata = resolve; });
+        await hiddenVideo.play();
+
+        const containerWidth = 960;
+        const containerHeight = 540;
+        const videoX = (canvas.width - containerWidth) / 2;
+        const videoY = (canvas.height - containerHeight) / 2;
+
+        while (!hiddenVideo.ended && !hiddenVideo.paused) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          
+          if (bgImg.complete && bgImg.naturalWidth !== 0) {
+            ctx.drawImage(bgImg, bgSx, bgSy, bgSw, bgSh, 0, 0, canvas.width, canvas.height);
+          } else {
+            ctx.fillStyle = "#1c1c1e";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
+
+          const targetRatio = containerWidth / containerHeight;
+          const videoRatio = hiddenVideo.videoWidth / hiddenVideo.videoHeight;
+          let drawWidth, drawHeight;
+
+          if (videoRatio > targetRatio) {
+            drawHeight = containerHeight;
+            drawWidth = containerHeight * videoRatio;
+          } else {
+            drawWidth = containerWidth;
+            drawHeight = containerWidth / videoRatio;
+          }
+
+          const offsetX = videoX - (drawWidth - containerWidth) / 2;
+          const offsetY = videoY - (drawHeight - containerHeight) / 2;
+
+          ctx.save();
+          ctx.beginPath();
+          if (ctx.roundRect) {
+            ctx.roundRect(videoX, videoY, containerWidth, containerHeight, 20);
+          } else {
+            ctx.rect(videoX, videoY, containerWidth, containerHeight);
+          }
+          ctx.clip();
+
+          if ((item.facingMode || "user") === "user") {
+            ctx.translate(videoX + containerWidth / 2, 0);
+            ctx.scale(-1, 1);
+            ctx.translate(-(videoX + containerWidth / 2), 0);
+          }
+          ctx.drawImage(hiddenVideo, offsetX, offsetY, drawWidth, drawHeight);
+          ctx.restore();
+
+          // ✍️ 텍스트 버닝 (시간 및 고도)
+          ctx.fillStyle = "white";
+          ctx.font = "600 41px -apple-system, sans-serif";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "top";
+          ctx.fillText(item.recordTime || "00:00", videoX + 18, videoY + 18);
+
+          ctx.font = "bold 46px -apple-system, sans-serif";
+          ctx.textBaseline = "middle";
+          const cleanText = (item.altitudeText || "해발 0m").trim();
+          const totalContentWidth = 31 + 9 + ctx.measureText(cleanText).width;
+          const startX = (canvas.width - totalContentWidth) / 2;
+          ctx.fillText(cleanText, startX + 40, videoY + (containerHeight / 2));
+
+          // 📊 [실시간 퍼센트 계산] 전체 영상 개수 대비 현재 진행률 계산식
+          const currentProgress = hiddenVideo.currentTime / (hiddenVideo.duration || 1);
+          const percent = Math.min(99, Math.round(((i + currentProgress) / items.length) * 100));
+          totalDownloadBtn.innerText = `🎞️고도필름 제작 중... (\${percent}%)`;
+
+          await new Promise(requestAnimationFrame);
+        }
+
+        // 사용 끝난 비디오 객체 정리 및 DOM에서 제거
+        URL.revokeObjectURL(hiddenVideo.src);
+        hiddenVideo.remove();
+      }
+
+      totalDownloadBtn.innerText = "💾 파일 저장 중...";
+      await new Promise(resolve => setTimeout(resolve, 500));
+      canvasRecorder.stop();
+
+    } catch (err) {
+      console.error("전체 영상 생성 에러:", err);
+      alert("동영상 생성을 실패했습니다.");
+      totalDownloadBtn.innerHTML = originalBtnText;
+      totalDownloadBtn.disabled = false;
+    }
+  };
 }
 
 if (totalDownloadBtn) {
