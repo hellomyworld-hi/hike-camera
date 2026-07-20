@@ -419,15 +419,26 @@ body > #total-download-btn, body > div[class*="Safari"] #total-download-btn,
 
 .mountain-pic-box {
   width: 100%;
-  aspect-ratio: 1/1;
+  aspect-ratio: 16/9; /* [변경] 1/1 정방형에서 16:9 와이드 비율로 변경 */
   background-color: #ffffff;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden; /* [추가] 영상이 넘치면 둥근 모서리에 맞게 잘라냄 */
+  position: relative;
 }
 
+/* [추가] 프로젝트 박스 안에 들어갈 썸네일 비디오 스타일 */
+.mountain-pic-box video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 16:9 박스에 영상을 빈틈없이 꽉 채움 */
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 .mountain-tag {
   color: #87CEEA;
   font-size: 20px;
