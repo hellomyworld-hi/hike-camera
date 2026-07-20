@@ -32,23 +32,14 @@ let currentProject = null; // 현재 입장한 방(프로젝트) 정보
 
 // 준비된 산 및 디자인 매핑 정보
 const availableDesigns = {
-    "소래산": {
-        "산 정상": "bg-sorae-peak.png"
-    },
-    "배봉산": {
-        "크래프트 (영어)": "bg-baebong-craft-english.png"
-    },
-    "수락산": {
-        "산 정상": "bg-surak-peak.png"
-    },
-    "구름산": {
-        "크래프트 (한글)": "bg-gooreum-craft-korean.png"
-    },
-    "미륵산": {
-        "산 정상": "bg-mireuk-peak.png"
-    }
+    "소래산": { "산 정상": "bg-sorae-peak.png" },
+    "배봉산": { "크래프트 (영어)": "bg-baebong-craft-english.png" },
+    "수락산": { "산 정상": "bg-surak-peak.png" },
+    "구름산": { "크래프트 (한글)": "bg-gooreum-craft-korean.png" },
+    "미륵산": { "산 정상": "bg-mireuk-peak.png" }
 };
 const allDesigns = ["산 정상", "크래프트 (영어)", "크래프트 (한글)"];
+
 // ==========================================
 // 2. DOMContentLoaded (초기화 및 UI 이벤트)
 // ==========================================
@@ -102,9 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const pictureBox = document.createElement("div");
         pictureBox.className = "mountain-pic-box";
 
-        // ==========================================================
-        // 3. [핵심 로직] 해당 프로젝트 ID와 일치하는 영상들을 필터링
-        // ==========================================================
+        // 해당 프로젝트 ID와 일치하는 영상들을 필터링
         const projectVideos = allVideos.filter(item => item.projectid === proj.id);
 
         if (projectVideos.length > 0) {
@@ -119,6 +108,19 @@ document.addEventListener("DOMContentLoaded", () => {
           videoThumbnail.preload = "metadata"; // 첫 프레임만 가볍게 로드
           videoThumbnail.muted = true;
           videoThumbnail.playsInline = true;
+          
+          // ✨ [요청 반영] 16:9 비율의 영상 박스를 빈틈없이 꽉 채우도록 CSS 스타일 명시
+          videoThumbnail.style.width = "100%";
+          videoThumbnail.style.height = "100%";
+          videoThumbnail.style.objectFit = "cover";
+          
+          // ✨ [렌더링 트릭] 모바일 브라우저에서 첫 프레임이 검은색 화면으로 멈추는 현상 방지
+          videoThumbnail.currentTime = 0.1; 
+
+          // ✨ [디테일 추가] 전면 카메라로 찍은 영상 조각이라면 썸네일도 보기 좋게 좌우 반전 처리
+          if ((firstVideo.facingMode || "user") === "user") {
+            videoThumbnail.style.transform = "scaleX(-1)";
+          }
 
           pictureBox.appendChild(videoThumbnail);
         } else {
@@ -128,7 +130,6 @@ document.addEventListener("DOMContentLoaded", () => {
           mountainTag.innerText = proj.mountain;
           pictureBox.appendChild(mountainTag);
         }
-        // ==========================================================
 
         const info = document.createElement("div");
         info.className = "project-info";
@@ -178,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // 더보기 버튼 및 팝업 메뉴
         const menuTrigger = document.createElement("div");
         menuTrigger.className = "menu-trigger";
-        menuTrigger.innerHTML = '&#8942;'; // 세로 땡땡땡 기호
+        menuTrigger.innerHTML = '&#8942;'; 
 
         const popup = document.createElement("div");
         popup.className = "project-menu-popup";
@@ -224,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (e.target.closest(".project-title")) return;
 
           currentProject = proj;
-          loadSavedVideos(currentProject.id); // 입장 시 해당 프로젝트 영상만 불러오기
+          loadSavedVideos(currentProject.id); 
 
           let bgImageUrl = "my-background.png";
           if (availableDesigns[proj.mountain] && availableDesigns[proj.mountain][proj.design]) {
@@ -249,6 +250,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
   }
+
+  // 외부(initApp)에서 호출할 수 있도록 글로벌 윈도우 객체에 바인딩
+  window.refreshProjectGrid = renderProjects;
+
   // 모달 열기
   if (openModalBtn) {
     openModalBtn.addEventListener("click", () => {
@@ -279,6 +284,8 @@ document.addEventListener("DOMContentLoaded", () => {
         mainContainer.classList.add("home-mode");
         currentProject = null;
       }
+      // ✨ [수정] 카메라 페이지에서 촬영 후 홈으로 돌아왔을 때 최신 썸네일을 즉시 반영하여 다시 그립니다.
+      renderProjects();
     });
   }
 
@@ -387,7 +394,6 @@ document.addEventListener("DOMContentLoaded", () => {
 // 3. 미디어 및 유틸리티 함수들
 // ==========================================
 function getSupportedMimeType() {
-    // iOS 사파리 인코딩 충돌을 막기 위해 codecs=avc1 등의 엄격한 조건 제거
     const types = ['video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
     for (const type of types) {
         if (MediaRecorder.isTypeSupported(type)) return type;
@@ -397,20 +403,19 @@ function getSupportedMimeType() {
 
 function initDatabase() {
   return new Promise((resolve, reject) => {
-    // 기존 1에서 2로 버전을 올려서 DB를 올바르게 재구축합니다.
     const request = indexedDB.open("Hike CameraDB", 2);
     request.onupgradeneeded = function(e) {
       const database = e.target.result;
       if (database.objectStoreNames.contains("videos")) {
-        database.deleteObjectStore("videos"); // 꼬인 옛날 데이터 초기화
+        database.deleteObjectStore("videos"); 
       }
-      // autolncrement(오타) -> autoIncrement 로 정상 수정
       database.createObjectStore("videos", { keyPath: "id", autoIncrement: true });
     };
     request.onsuccess = function(e) { db = e.target.result; resolve(); };
     request.onerror = function(e) { console.error("DB 에러", e); reject(); };
   });
 }
+
 function startCameraClock() {
   let cameraTimeText = document.getElementById('camera-time-text');
   if (!cameraTimeText) {
@@ -475,8 +480,6 @@ async function startCamera() {
         
         if (recordBtn) recordBtn.style.zIndex = '30';
         if (switchCameraBtn) switchCameraBtn.style.zIndex = '30';
-
-        // ✅ [수정] 이 위치에 있던 mediaRecorder 생성 로직을 전부 삭제했습니다.
         
     } catch (error) {
         console.error("카메라 작동 에러:", error);
@@ -516,7 +519,7 @@ function saveVideoToDB(blob, altitude, recordTime, projectid, facingMode) {
  altitudeText: altitude,
  recordTime: recordTime,
  projectid: projectid,
- facingMode: facingMode || "user" // ✅ 촬영 방향 정보 추가 저장
+ facingMode: facingMode || "user"
  });
  
  request.onsuccess = (e) => resolve(e.target.result);
@@ -533,7 +536,6 @@ function deleteVideoFromDB(id) {
   });
 }
 
-// 🔥 [요청 수정 반영 완료] 카메라 화면은 유지하고 프로젝트 전용 저장 영상 슬라이드만 제어하는 함수
 function loadSavedVideos(projectid) {
  if (sliderWrapper) {
  const savedSlides = sliderWrapper.querySelectorAll(':scope > .slide-page:not(#camera-page)');
@@ -556,7 +558,6 @@ function loadSavedVideos(projectid) {
  const filteredVideos = allVideos.filter(item => item.projectid === projectid);
  
  filteredVideos.forEach(item => {
- // ✅ 불러올 때 facingMode 정보(없으면 기본값 user) 전달
  addVideoSlideToUI(item.videoBlob, item.altitudeText, item.id, item.recordTime, false, item.facingMode || "user");
  });
  
@@ -571,7 +572,6 @@ function loadSavedVideos(projectid) {
  });
 }
 
-// ✅ 파라미터 끝에 facingMode 추가
 function addVideoSlideToUI(blob, altitude, id, recordTime, autoMove = true, facingMode = "user") {
  if (!sliderWrapper || !cameraPage) return;
  const safeBlob = new Blob([blob], { type: blob.type || 'video/mp4' });
@@ -579,27 +579,25 @@ function addVideoSlideToUI(blob, altitude, id, recordTime, autoMove = true, faci
  const newSlide = document.createElement('div');
  newSlide.className = 'slide-page';
  newSlide.style.position = 'relative';
-const newVideo = document.createElement('video');
-newVideo.src = videoURL;
-newVideo.className = 'saved-video';
-// muted 관련 설정 2줄 삭제! (자바스크립트로 부드럽게 제어할 예정입니다)
-newVideo.playsInline = true;
-newVideo.setAttribute('playsinline', '');
-newVideo.loop = true;
+ const newVideo = document.createElement('video');
+ newVideo.src = videoURL;
+ newVideo.className = 'saved-video';
+ newVideo.playsInline = true;
+ newVideo.setAttribute('playsinline', '');
+ newVideo.loop = true;
 
- // ✅ 전면 카메라일 경우, 재생 화면을 좌우 반전 처리
  if (facingMode === "user") {
  newVideo.style.transform = 'scaleX(-1)';
  }
 
-newVideo.addEventListener('click', (e) => {
+ newVideo.addEventListener('click', (e) => {
     e.stopPropagation();
     if (newVideo.paused) {
         newVideo.play().catch(err => console.log(err));
     } else {
         newVideo.pause();
     }
-});
+ });
  const newOverlay = document.createElement('div');
  newOverlay.className = 'altitude-overlay';
  newOverlay.innerHTML = `<span>${altitude}</span>`;
@@ -624,8 +622,7 @@ newVideo.addEventListener('click', (e) => {
  e.stopPropagation();
  e.preventDefault();
  newVideo.pause();
- if (confirm("이 영상을 삭제하시겠습니까?"
- )) {
+ if (confirm("이 영상을 삭제하시겠습니까?")) {
  await deleteVideoFromDB(id);
  newSlide.remove();
  totalSlides--;
@@ -664,7 +661,6 @@ function getRealAltitude() {
 }
 
 function executionRecord() {
- // 카메라 뷰에 활성화된 스트림이 없으면 중단
  if (!cameraView || !cameraView.srcObject || !recordBtn) return;
  const stream = cameraView.srcObject;
  const mimeType = getSupportedMimeType();
@@ -686,30 +682,28 @@ function executionRecord() {
  const now = new Date();
  const recordTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
  
- // ✅ currentFacingMode를 DB와 UI에 함께 전달
  const savedId = await saveVideoToDB(recordedBlob, currentAltitude, recordTime, currentProject ? currentProject.id : null, currentFacingMode);
  addVideoSlideToUI(recordedBlob, currentAltitude, savedId, recordTime, true, currentFacingMode);
  };
  
-mediaRecorder.start(200); // 데이터 쪼개기: 200ms 단위로 데이터를 기록해 마지막 프레임 유실 방지
-recordBtn.innerText = "녹화중";
-recordBtn.style.backgroundColor = "gray";
-recordBtn.style.borderColor = "gray";
-getRealAltitude();
+ mediaRecorder.start(200); 
+ recordBtn.innerText = "녹화중";
+ recordBtn.style.backgroundColor = "gray";
+ recordBtn.style.borderColor = "gray";
+ getRealAltitude();
 
-setTimeout(() => {
+ setTimeout(() => {
     if (mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
     }
     recordBtn.innerText = "REC";
     recordBtn.style.backgroundColor = "red";
     recordBtn.style.borderColor = "white";
-}, 3300); // 3000 -> 3300으로 0.3초 늘려서 녹화 준비 딜레이 보상
+ }, 3300); 
 }
 
 if (recordBtn) {
     recordBtn.addEventListener('click', () => {
-        // ✅ 수정됨: mediaRecorder가 존재하고 '녹화 중'일 때만 작동을 막음
         if ((mediaRecorder && mediaRecorder.state === 'recording') || 
             recordBtn.innerText.includes("초")) return;
             
@@ -728,6 +722,7 @@ if (recordBtn) {
                 }
             }, 1000);
         } else {
+            document.activeElement && document.activeElement.blur();
             executionRecord();
         }
     });
@@ -839,19 +834,16 @@ document.addEventListener('mouseup', e => {
 });
 
 function handleSwipe() {
-  // OCR 공백 결합 수정
   const swipeDistanceX = touchStartX - touchEndX;
   const swipeDistanceY = touchStartY - touchEndY;
   
   if (Math.abs(swipeDistanceX) < 40 || Math.abs(swipeDistanceY) > 60) return;
   
-  // 오른쪽으로 화면을 밀었을 때 (이전 과거 영상 보기) - 빈 중괄호 버그 수정
   if (swipeDistanceX < -50 && currentSlideIndex > 0) {
     currentSlideIndex--;
     updateSliderPosition();
   }
   
-  // 왼쪽으로 화면을 밀었을 때 (다음 영상 또는 카메라 화면으로 돌아가기)
   if (swipeDistanceX > 50 && currentSlideIndex < totalSlides - 1) {
     currentSlideIndex++;
     updateSliderPosition();
@@ -860,26 +852,23 @@ function handleSwipe() {
 
 function updateSliderPosition() {
   if (!sliderWrapper) return;
-  // 중간 공백 및 오타 제거
   sliderWrapper.style.transform = `translateX(-${currentSlideIndex * 100}%)`;
   
   Array.from(sliderWrapper.children).forEach((slide, i) => {
     const video = slide.querySelector('.saved-video');
     if (video) {
-if (i === currentSlideIndex) {
-    video.currentTime = 0;
-    video.muted = false; // ✨ 화면에 보일 때 소리를 켭니다!
-    video.play().catch(err => {
-        // 브라우저 정책상 켜진 소리로 자동재생이 막히면 음소거로라도 재생되도록 폴백 처리
-        console.log("Autoplay fallback muted mode:", err);
-        video.muted = true; 
-        video.play().catch(e => console.log(e));
-        // 기존에 있던 video.pause(); 삭제 완료
-    });
-} else {
-    video.pause();
-    video.muted = true; // ✨ 안 보이는 영상은 혹시 모를 소리 겹침 방지를 위해 음소거
-}
+        if (i === currentSlideIndex) {
+            video.currentTime = 0;
+            video.muted = false; 
+            video.play().catch(err => {
+                console.log("Autoplay fallback muted mode:", err);
+                video.muted = true; 
+                video.play().catch(e => console.log(e));
+            });
+        } else {
+            video.pause();
+            video.muted = true; 
+        }
     }
   });
 }
@@ -922,7 +911,7 @@ async function generateTotalLogVideo() {
                 const downloadUrl = URL.createObjectURL(resultBlob);
                 const now = new Date();
                 const year = now.getFullYear();
-                const month = now.getMonth() + 1; // 1월은 0으로 시작하므로 +1
+                const month = now.getMonth() + 1; 
                 const day = now.getDate();
                 const fileName = `${year}년 ${month}월 ${day}일의 고도필름.mp4`;
                 const a = document.createElement('a');
@@ -938,7 +927,6 @@ async function generateTotalLogVideo() {
             
             canvasRecorder.start();
             
-            // 변수명을 명확한 bgImg로 변경하여 진행
             const bgImg = new Image(); 
             let logBgUrl = "my-background.png";
             if (currentProject && availableDesigns[currentProject.mountain] && availableDesigns[currentProject.mountain][currentProject.design]) {
@@ -950,17 +938,14 @@ async function generateTotalLogVideo() {
                 bgImg.onerror = resolve;
             });
 
-            // Crop 좌표 계산 (기호 누락 오류 수정)
             let bgSx = 0, bgSy = 0, bgSw = bgImg.naturalWidth, bgSh = bgImg.naturalHeight;
             if (bgImg.complete && bgImg.naturalWidth !== 0) {
-                const canvasRatio = canvas.width / canvas.height; // 1080/1920 = 0.5625
+                const canvasRatio = canvas.width / canvas.height; 
                 const imgRatio = bgImg.naturalWidth / bgImg.naturalHeight;
                 if (imgRatio > canvasRatio) {
-                    // 이미지가 캔버스 비율보다 가로로 더 넓은 경우 (좌우를 잘라냄)
                     bgSw = bgImg.naturalHeight * canvasRatio;
                     bgSx = (bgImg.naturalWidth - bgSw) / 2;
                 } else {
-                    // 이미지가 캔버스 비율보다 세로로 더 긴 경우 (위아래를 잘라냄)
                     bgSh = bgImg.naturalWidth / canvasRatio;
                     bgSy = (bgImg.naturalHeight - bgSh) / 2;
                 }
@@ -981,12 +966,11 @@ async function generateTotalLogVideo() {
                 const containerWidth = 960;
                 const containerHeight = 540;
                 const videoX = (canvas.width - containerWidth) / 2;
-                const videoY = (canvas.height - containerHeight) / 2; // 마이너스 기호 복구
+                const videoY = (canvas.height - containerHeight) / 2; 
                 
                 while (!hiddenVideo.ended && !hiddenVideo.paused) {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     
-                    // 배경 크롭하여 꽉 차게 그리기
                     if (bgImg.complete && bgImg.naturalWidth !== 0) {
                         ctx.drawImage(bgImg, bgSx, bgSy, bgSw, bgSh, 0, 0, canvas.width, canvas.height);
                     } else {
@@ -1006,7 +990,6 @@ async function generateTotalLogVideo() {
                         drawHeight = containerWidth / videoRatio;
                     }
                     
-                    // 수식 기호 복구
                     const offsetX = videoX - (drawWidth - containerWidth) / 2;
                     const offsetY = videoY - (drawHeight - containerHeight) / 2;
                     
@@ -1015,7 +998,7 @@ async function generateTotalLogVideo() {
                     if (ctx.roundRect) {
                         ctx.roundRect(videoX, videoY, containerWidth, containerHeight, 20);
                     } else {
-                        ctx.rect(videoX, videoY, containerWidth, containerHeight); // videoY 대소문자 오타 수정
+                        ctx.rect(videoX, videoY, containerWidth, containerHeight); 
                     }
                     ctx.clip();
                     
@@ -1067,6 +1050,11 @@ async function initApp() {
   // 최초 로드 시에는 공백으로 호출
   await loadSavedVideos("");
   startCameraClock();
+  
+  // ✨ [수정] 비동기로 IndexedDB 연결이 완벽히 끝난 후, 초기화면 프로젝트 썸네일을 최신 상태로 새로고침합니다.
+  if (window.refreshProjectGrid) {
+    window.refreshProjectGrid();
+  }
 }
 
 initApp();
