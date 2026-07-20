@@ -209,11 +209,21 @@ document.addEventListener("DOMContentLoaded", () => {
           startEditing();
         });
 
-        deleteItem.addEventListener("click", (e) => {
+        // 🔄 교체할 코드: 프로젝트 삭제 시 관련된 영상 데이터도 함께 날려버림
+        deleteItem.addEventListener("click", async (e) => {
           e.stopPropagation();
-          if (confirm("프로젝트를 삭제하시겠습니까?")) {
+          if (confirm("프로젝트를 삭제하시겠습니까? \n관련 영상도 모두 완전히 삭제됩니다.")) {
+            // 삭제하려는 방의 ID 미리 기억해두기
+            const targetProjectId = projects[originalIndex].id;
+
+            // 1. localStorage에서 프로젝트 '껍데기' 삭제
             projects.splice(originalIndex, 1);
             localStorage.setItem("climbingProjects", JSON.stringify(projects));
+
+            // 2. ✨ 방금 만든 함수 호출: IndexedDB에서 주인을 잃을 '무거운 영상 파일'들 싹 다 삭제
+            await deleteProjectVideos(targetProjectId);
+
+            // 3. 깨끗해진 상태로 홈 화면 다시 그리기
             renderProjects();
           }
         });
@@ -533,6 +543,33 @@ function deleteVideoFromDB(id) {
     const store = transaction.objectStore("videos");
     const request = store.delete(id);
     request.onsuccess = () => resolve();
+  });
+}
+
+// ✨ 새로 추가: 특정 프로젝트(방)에 속한 모든 영상을 DB에서 완전히 삭제하는 함수
+function deleteProjectVideos(projectId) {
+  return new Promise((resolve) => {
+    if (!db) {
+      resolve();
+      return;
+    }
+    const transaction = db.transaction(["videos"], "readwrite");
+    const store = transaction.objectStore("videos");
+    const request = store.openCursor(); // 커서를 이용해 데이터를 하나씩 순회
+
+    request.onsuccess = function(e) {
+      const cursor = e.target.result;
+      if (cursor) {
+        // 영상의 projectid가 삭제하려는 프로젝트의 id와 같다면 완전 삭제
+        if (cursor.value.projectid === projectId) {
+          cursor.delete();
+        }
+        cursor.continue(); // 다음 영상으로 이동
+      } else {
+        // 모든 검색/삭제가 끝나면 완료 처리
+        resolve();
+      }
+    };
   });
 }
 
