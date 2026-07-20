@@ -858,7 +858,7 @@ async function generateTotalLogVideo() {
             return;
         }
         const originalBtnText = totalDownloadBtn.innerHTML;
-        totalDownloadBtn.innerText = " 고도필름 제작 중...";
+        totalDownloadBtn.innerText = "🎞️ 고도필름 제작 중...";
         totalDownloadBtn.disabled = true;
         try {
             const canvas = document.createElement('canvas');
