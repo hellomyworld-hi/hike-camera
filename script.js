@@ -33,19 +33,19 @@ let currentProject = null; // 현재 입장한 방(프로젝트) 정보
 // 준비된 산 및 디자인 매핑 정보
 const availableDesigns = {
   "소래산": {
-    "산 정상": "bg-소래산-산정상.png"
+    "산 정상": "bg-sorae-peak.png"
   },
   "배봉산": {
-    "크래프트 (영어)": "bg-배봉산-크래프트_영어.png"
+    "크래프트 (영어)": "bg-baebong-craft-english.png"
   },
   "수락산": {
-    "산 정상": "bg-수락산-산정상.png"
+    "산 정상": "bg-surak-peak.png"
   },
   "구름산": {
-    "크래프트 (한글)": "bg-구름산-크래프트_한글.png"
+    "크래프트 (한글)": "bg-gooreum-craft-korean.png"
   },
   "미륵산": {
-    "산 정상": "bg-미륵산-산정상.png"
+    "산 정상": "bg-mireuk-peak.png"
   }
 };
 const allDesigns = ["산 정상", "크래프트 (영어)", "크래프트 (한글)"];
