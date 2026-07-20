@@ -873,7 +873,7 @@ async function generateTotalLogVideo() {
   if (!totalDownloadBtn) return;
   
   const transaction = db.transaction(["videos"], "readonly");
-  const store = transaction.objectStore("videos");
+  const store = transaction.objectStore(["videos"]);
   const request = store.getAll();
   
   request.onsuccess = async function(e) {
@@ -887,7 +887,7 @@ async function generateTotalLogVideo() {
     }
 
     const originalBtnText = totalDownloadBtn.innerHTML;
-    totalDownloadBtn.innerText = "🎞️고도필름 제작 중... (0%)";
+    totalDownloadBtn.innerText = "🎞️ 고도필름 제작 시작 (0%)";
     totalDownloadBtn.disabled = true;
 
     try {
@@ -951,28 +951,63 @@ async function generateTotalLogVideo() {
         const item = items[i];
         const hiddenVideo = document.createElement('video');
         hiddenVideo.src = URL.createObjectURL(item.videoBlob);
+        
+        // 💡 [최적화 1] 모바일 브라우저의 재생 거부를 막는 필수 속성 주입
         hiddenVideo.muted = true;
         hiddenVideo.playsInline = true;
+        hiddenVideo.setAttribute('playsinline', '');
+        hiddenVideo.setAttribute('muted', '');
 
-        // 💡 [핵심 최적화] 스마트폰 브라우저가 영상을 멈추지 않도록 invisible 형태로 DOM에 강제 부착!
+        // 💡 [최적화 2] 1px 크기는 모바일이 휴면 처리하므로, 화면 전체를 투명하게 덮어 속임수 사용
         hiddenVideo.style.position = 'fixed';
         hiddenVideo.style.top = '0';
         hiddenVideo.style.left = '0';
-        hiddenVideo.style.width = '1px';
-        hiddenVideo.style.height = '1px';
-        hiddenVideo.style.opacity = '0.01';
+        hiddenVideo.style.width = '100%';
+        hiddenVideo.style.height = '100%';
+        hiddenVideo.style.opacity = '0.001';
+        hiddenVideo.style.zIndex = '-9999';
         hiddenVideo.style.pointerEvents = 'none';
         document.body.appendChild(hiddenVideo);
 
-        await new Promise((resolve) => { hiddenVideo.onloadeddata = resolve; });
-        await hiddenVideo.play();
+        await new Promise((resolve) => { 
+          hiddenVideo.onloadeddata = resolve;
+          setTimeout(resolve, 1500); // 영상 로드가 안 되어도 최대 1.5초 후 강제 진행
+        });
+        
+        try {
+          await hiddenVideo.play();
+        } catch(playErr) {
+          console.log("자동 재생 제한 우회 시도");
+        }
 
         const containerWidth = 960;
         const containerHeight = 540;
         const videoX = (canvas.width - containerWidth) / 2;
         const videoY = (canvas.height - containerHeight) / 2;
 
+        // 💡 [최적화 3] 데드락 방지 타이머 세팅 (멈춤 버그 파괴용)
+        let lastCurrentTime = -1;
+        let lastTimeUpdate = Date.now();
+
         while (!hiddenVideo.ended && !hiddenVideo.paused) {
+          const nowTime = Date.now();
+          
+          // 브라우저가 영상을 멈춰서 재생 시간이 1초 동안 그대로라면 강제로 탈출(break) 시킴
+          if (hiddenVideo.currentTime === lastCurrentTime) {
+            if (nowTime - lastTimeUpdate > 1000) {
+              console.warn("모바일 브라우저 멈춤 감지 -> 다음 프레임/영상으로 강제 진행");
+              break; 
+            }
+          } else {
+            lastCurrentTime = hiddenVideo.currentTime;
+            lastTimeUpdate = nowTime;
+          }
+
+          // 영상이 거의 끝부분에 도달했다면 안전하게 루프 종료
+          if (hiddenVideo.duration && hiddenVideo.currentTime >= hiddenVideo.duration - 0.1) {
+            break;
+          }
+
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           
           if (bgImg.complete && bgImg.naturalWidth !== 0) {
@@ -1014,7 +1049,6 @@ async function generateTotalLogVideo() {
           ctx.drawImage(hiddenVideo, offsetX, offsetY, drawWidth, drawHeight);
           ctx.restore();
 
-          // ✍️ 텍스트 버닝 (시간 및 고도)
           ctx.fillStyle = "white";
           ctx.font = "600 41px -apple-system, sans-serif";
           ctx.textAlign = "left";
@@ -1028,16 +1062,18 @@ async function generateTotalLogVideo() {
           const startX = (canvas.width - totalContentWidth) / 2;
           ctx.fillText(cleanText, startX + 40, videoY + (containerHeight / 2));
 
-          // 📊 [실시간 퍼센트 계산] 전체 영상 개수 대비 현재 진행률 계산식
-          const currentProgress = hiddenVideo.currentTime / (hiddenVideo.duration || 1);
+          const currentProgress = hiddenVideo.duration ? (hiddenVideo.currentTime / hiddenVideo.duration) : 0;
           const percent = Math.min(99, Math.round(((i + currentProgress) / items.length) * 100));
-          totalDownloadBtn.innerText = `🎞️고도필름 제작 중... (${percent}%)`;
+          totalDownloadBtn.innerText = `🎞️ 고도필름 제작 중... (${percent}%)`;
 
           await new Promise(requestAnimationFrame);
         }
 
-        // 사용 끝난 비디오 객체 정리 및 DOM에서 제거
+        // 💡 [최적화 4] 사용이 끝난 무거운 비디오 객체와 메모리를 폰에서 완전히 소멸시킴
+        hiddenVideo.pause();
         URL.revokeObjectURL(hiddenVideo.src);
+        hiddenVideo.src = "";
+        hiddenVideo.load();
         hiddenVideo.remove();
       }
 
