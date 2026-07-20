@@ -70,157 +70,185 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let projects = JSON.parse(localStorage.getItem("climbingProjects")) || [];
 
-  // 프로젝트 목록 렌더링
+  // 프로젝트 목록 렌더링 (IndexedDB 연동 버전)
   function renderProjects() {
     if (!projectGrid) return;
     projectGrid.innerHTML = "";
-    const latestProjects = [...projects].reverse();
-    latestProjects.forEach((proj, index) => {
-      const originalIndex = projects.length - 1 - index;
-      const card = document.createElement("div");
-      card.className = "project-card";
 
-      const pictureBox = document.createElement("div");
-      pictureBox.className = "mountain-pic-box";
+    // 1. IndexedDB가 아직 연결되지 않았다면 영상 없이 기본 카드만 렌더링
+    if (!db) {
+      renderCards([]);
+      return;
+    }
 
-      // 프로젝트 데이터에 저장된 비디오 URL이 있는지 확인
-      // (※ 만약 비디오 주소를 다른 변수명으로 저장했다면 proj.videoUrl을 그 이름으로 바꿔줘)
-      if (proj.videoUrl) {
-        const videoThumbnail = document.createElement("video");
-        videoThumbnail.src = proj.videoUrl; 
-        videoThumbnail.preload = "metadata"; // 첫 프레임만 가볍게 로드
-        videoThumbnail.muted = true;
-        videoThumbnail.playsInline = true; // 모바일 브라우저 전체화면 방지 (JS는 camelCase 필수)
-        
-        pictureBox.appendChild(videoThumbnail);
-      } else {
-        // 영상이 없을 때는 기존 기본값 (하얀 배경 + 산 이름 글자)
-        const mountainTag = document.createElement("div");
-        mountainTag.className = "mountain-tag";
-        mountainTag.innerText = proj.mountain;
-        
-        pictureBox.appendChild(mountainTag);
-      }
+    // 2. IndexedDB의 'videos' 스토어에서 저장된 모든 영상 데이터를 가져옴
+    const transaction = db.transaction(["videos"], "readonly");
+    const store = transaction.objectStore("videos");
+    const request = store.getAll();
 
-      const info = document.createElement("div");
-      info.className = "project-info";
-      info.innerHTML = `
-        <div class="project-title">${proj.name}</div>
-        <div class="project-date">${proj.date}</div>
-      `;
+    request.onsuccess = function (e) {
+      const allVideos = e.target.result || [];
+      renderCards(allVideos); // 영상을 성공적으로 가져오면 카드 그리기 시작
+    };
 
-      const titleElement = info.querySelector('.project-title');
+    // 실제 카드를 화면에 그리는 내부 함수
+    function renderCards(allVideos) {
+      const latestProjects = [...projects].reverse();
+      latestProjects.forEach((proj, index) => {
+        const originalIndex = projects.length - 1 - index;
+        const card = document.createElement("div");
+        card.className = "project-card";
 
-      function startEditing() {
-        titleElement.contentEditable = "true";
-        titleElement.focus();
-        const range = document.createRange();
-        const sel = window.getSelection();
-        range.selectNodeContents(titleElement);
-        range.collapse(false);
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
+        const pictureBox = document.createElement("div");
+        pictureBox.className = "mountain-pic-box";
 
-      function saveEditing() {
-        titleElement.contentEditable = "false";
-        const newName = titleElement.innerText.trim();
-        if (newName && newName !== proj.name) {
-          projects[originalIndex].name = newName;
-          localStorage.setItem("climbingProjects", JSON.stringify(projects));
+        // ==========================================================
+        // 3. [핵심 로직] 해당 프로젝트 ID와 일치하는 영상들을 필터링
+        // ==========================================================
+        const projectVideos = allVideos.filter(item => item.projectid === proj.id);
+
+        if (projectVideos.length > 0) {
+          // 촬영된 영상이 있다면, 가장 첫 번째로 촬영된 영상(index 0)을 가져옴
+          const firstVideo = projectVideos[0];
+          const safeBlob = new Blob([firstVideo.videoBlob], { type: firstVideo.videoBlob.type || 'video/mp4' });
+          const videoURL = URL.createObjectURL(safeBlob);
+
+          // 비디오 태그 생성 및 첫 프레임 썸네일 설정
+          const videoThumbnail = document.createElement("video");
+          videoThumbnail.src = videoURL;
+          videoThumbnail.preload = "metadata"; // 첫 프레임만 가볍게 로드
+          videoThumbnail.muted = true;
+          videoThumbnail.playsInline = true;
+
+          pictureBox.appendChild(videoThumbnail);
         } else {
-          titleElement.innerText = proj.name;
+          // 영상이 없을 때는 기존 기본값 (하얀 배경 + 산 이름 글자)
+          const mountainTag = document.createElement("div");
+          mountainTag.className = "mountain-tag";
+          mountainTag.innerText = proj.mountain;
+          pictureBox.appendChild(mountainTag);
         }
-      }
+        // ==========================================================
 
-      titleElement.addEventListener("click", (e) => {
-        e.stopPropagation();
-        startEditing();
-      });
+        const info = document.createElement("div");
+        info.className = "project-info";
+        info.innerHTML = `
+          <div class="project-title">${proj.name}</div>
+          <div class="project-date">${proj.date}</div>
+        `;
 
-      titleElement.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          titleElement.blur();
+        const titleElement = info.querySelector('.project-title');
+
+        function startEditing() {
+          titleElement.contentEditable = "true";
+          titleElement.focus();
+          const range = document.createRange();
+          const sel = window.getSelection();
+          range.selectNodeContents(titleElement);
+          range.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(range);
         }
-      });
 
-      titleElement.addEventListener("blur", saveEditing);
+        function saveEditing() {
+          titleElement.contentEditable = "false";
+          const newName = titleElement.innerText.trim();
+          if (newName && newName !== proj.name) {
+            projects[originalIndex].name = newName;
+            localStorage.setItem("climbingProjects", JSON.stringify(projects));
+          } else {
+            titleElement.innerText = proj.name;
+          }
+        }
 
-      // 더보기 버튼 및 팝업 메뉴
-      const menuTrigger = document.createElement("div");
-      menuTrigger.className = "menu-trigger";
-      menuTrigger.innerHTML = '&#8942;'; // 세로 땡땡땡 기호
-      
-      const popup = document.createElement("div");
-      popup.className = "project-menu-popup";
-
-      const renameItem = document.createElement("div");
-      renameItem.className = "menu-item";
-      renameItem.innerHTML = '<span class="menu-text">이름 변경하기</span>';
-
-      const deleteItem = document.createElement("div");
-      deleteItem.className = "menu-item";
-      deleteItem.innerHTML = '<span class="menu-text">삭제하기</span>';
-
-      popup.appendChild(renameItem);
-      popup.appendChild(deleteItem);
-
-      menuTrigger.addEventListener("click", (e) => {
-        e.stopPropagation();
-        document.querySelectorAll(".project-menu-popup").forEach(menu => {
-          if (menu !== popup) menu.style.display = "none";
+        titleElement.addEventListener("click", (e) => {
+          e.stopPropagation();
+          startEditing();
         });
-        popup.style.display = popup.style.display === "block" ? "none" : "block";
+
+        titleElement.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            titleElement.blur();
+          }
+        });
+
+        titleElement.addEventListener("blur", saveEditing);
+
+        // 더보기 버튼 및 팝업 메뉴
+        const menuTrigger = document.createElement("div");
+        menuTrigger.className = "menu-trigger";
+        menuTrigger.innerHTML = '&#8942;'; // 세로 땡땡땡 기호
+
+        const popup = document.createElement("div");
+        popup.className = "project-menu-popup";
+
+        const renameItem = document.createElement("div");
+        renameItem.className = "menu-item";
+        renameItem.innerHTML = '<span class="menu-text">이름 변경하기</span>';
+
+        const deleteItem = document.createElement("div");
+        deleteItem.className = "menu-item";
+        deleteItem.innerHTML = '<span class="menu-text">삭제하기</span>';
+
+        popup.appendChild(renameItem);
+        popup.appendChild(deleteItem);
+
+        menuTrigger.addEventListener("click", (e) => {
+          e.stopPropagation();
+          document.querySelectorAll(".project-menu-popup").forEach(menu => {
+            if (menu !== popup) menu.style.display = "none";
+          });
+          popup.style.display = popup.style.display === "block" ? "none" : "block";
+        });
+
+        renameItem.addEventListener("click", (e) => {
+          e.stopPropagation();
+          popup.style.display = "none";
+          startEditing();
+        });
+
+        deleteItem.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (confirm("프로젝트를 삭제하시겠습니까?")) {
+            projects.splice(originalIndex, 1);
+            localStorage.setItem("climbingProjects", JSON.stringify(projects));
+            renderProjects();
+          }
+        });
+
+        // 카드 클릭 시 방 입장
+        card.addEventListener("click", (e) => {
+          if (e.target.closest(".menu-trigger")) return;
+          if (e.target.closest(".project-menu-popup")) return;
+          if (e.target.closest(".project-title")) return;
+
+          currentProject = proj;
+          loadSavedVideos(currentProject.id); // 입장 시 해당 프로젝트 영상만 불러오기
+
+          let bgImageUrl = "my-background.png";
+          if (availableDesigns[proj.mountain] && availableDesigns[proj.mountain][proj.design]) {
+            bgImageUrl = availableDesigns[proj.mountain][proj.design];
+          }
+
+          if (homeView) homeView.style.display = "none";
+          if (cameraPageView) cameraPageView.style.display = "flex";
+          if (mainContainer) {
+            mainContainer.classList.remove("home-mode");
+            mainContainer.style.backgroundImage = `url('${bgImageUrl}')`;
+          }
+          startCamera();
+          getRealAltitude();
+        });
+
+        card.appendChild(menuTrigger);
+        card.appendChild(popup);
+        card.appendChild(pictureBox);
+        card.appendChild(info);
+        projectGrid.appendChild(card);
       });
-
-      renameItem.addEventListener("click", (e) => {
-        e.stopPropagation();
-        popup.style.display = "none";
-        startEditing();
-      });
-
-      deleteItem.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (confirm("프로젝트를 삭제하시겠습니까?")) {
-          projects.splice(originalIndex, 1);
-          localStorage.setItem("climbingProjects", JSON.stringify(projects));
-          renderProjects();
-        }
-      });
-
-      // 카드 클릭 시 방 입장
-      card.addEventListener("click", (e) => {
-        if (e.target.closest(".menu-trigger")) return;
-        if (e.target.closest(".project-menu-popup")) return;
-        if (e.target.closest(".project-title")) return;
-
-        currentProject = proj;
-        loadSavedVideos(currentProject.id); // 입장 시 해당 프로젝트 영상만 불러오기
-
-        let bgImageUrl = "my-background.png";
-        if (availableDesigns[proj.mountain] && availableDesigns[proj.mountain][proj.design]) {
-          bgImageUrl = availableDesigns[proj.mountain][proj.design];
-        }
-
-        if (homeView) homeView.style.display = "none";
-        if (cameraPageView) cameraPageView.style.display = "flex";
-        if (mainContainer) {
-          mainContainer.classList.remove("home-mode");
-          mainContainer.style.backgroundImage = `url('${bgImageUrl}')`;
-        }
-        startCamera();
-        getRealAltitude();
-      });
-
-      card.appendChild(menuTrigger);
-      card.appendChild(popup);
-      card.appendChild(pictureBox);
-      card.appendChild(info);
-      projectGrid.appendChild(card);
-    });
+    }
   }
-
   // 모달 열기
   if (openModalBtn) {
     openModalBtn.addEventListener("click", () => {
