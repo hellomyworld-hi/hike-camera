@@ -10,6 +10,22 @@
   <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
 </head>
 <body>
+  <!-- 앱 최상단에 배치될 스플래시 화면 -->
+<div id="splash-screen">
+  <div class="splash-logo-wrapper">
+    <!-- 왼쪽으로 밀리며 나타날 GOD 글자 -->
+    <div class="splash-god-box">
+      <img src="god-text.png" alt="GOD" class="anim-god">
+    </div>
+    <!-- 중앙에 있다가 오른쪽으로 튕겨 나갈 카메라 O -->
+    <div class="splash-camera-box">
+      <img src="camera-o.png" alt="Camera O" class="anim-camera">
+    </div>
+  </div>
+  
+  <!-- 하단에 뱅글뱅글 도는 모던한 로딩 바 -->
+  <div class="splash-loader"></div>
+</div>
   <div class="full-screen-bg"></div>
   <div class="background-container home-mode" id="main-container">
     <div id="home-view" class="main-view">
