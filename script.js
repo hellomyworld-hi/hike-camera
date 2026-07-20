@@ -904,6 +904,24 @@ document.body.appendChild(a);
  bgImg.onload = resolve;
  bgImg.onerror = resolve;
  });
+
+ // 🔥 [추가] 이미지의 원본 비율을 유지하며 9:16 캔버스에 맞추기 위한 Crop 좌표 계산
+let bgSx = 0, bgSy = 0, bgSw = bglmg.naturalWidth, bgSh = bglmg.naturalHeight;
+if (bglmg.complete && bglmg.naturalWidth !== 0) {
+    const canvasRatio = canvas.width / canvas.height; // 1080 / 1920 = 0.5625
+    const imgRatio = bglmg.naturalWidth / bglmg.naturalHeight;
+
+    if (imgRatio > canvasRatio) {
+        // 이미지가 캔버스 비율보다 가로로 더 넓은 경우 (좌우를 잘라냄)
+        bgSw = bglmg.naturalHeight * canvasRatio;
+        bgSx = (bglmg.naturalWidth - bgSw) / 2;
+    } else {
+        // 이미지가 캔버스 비율보다 세로로 더 긴 경우 (위아래를 잘라냄 - 현재 케이스)
+        bgSh = bglmg.naturalWidth / canvasRatio;
+        bgSy = (bglmg.naturalHeight - bgSh) / 2;
+    }
+}
+
  for (let i = 0; i < items.length; i++) {
  const item = items[i];
  const hiddenVideo = document.createElement('video');
@@ -920,6 +938,13 @@ document.body.appendChild(a);
  const videoY = (canvas.height - containerHeight) / 2;
  while (!hiddenVideo.ended && !hiddenVideo.paused) {
  ctx.clearRect(0, 0, canvas.width, canvas.height);
+ // 🔥 [수정] 강제로 늘리지 않고, 계산된 영역만큼만 잘라서 캔버스에 꽉 채워 그림
+        if (bglmg.complete && bglmg.naturalWidth !== 0) {
+            ctx.drawImage(bglmg, bgSx, bgSy, bgSw, bgSh, 0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = "#1c1c1e";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
  if (bgImg.complete && bgImg.naturalWidth !== 0) {
  ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
  } else {
