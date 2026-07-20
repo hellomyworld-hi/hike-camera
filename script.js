@@ -32,24 +32,23 @@ let currentProject = null; // 현재 입장한 방(프로젝트) 정보
 
 // 준비된 산 및 디자인 매핑 정보
 const availableDesigns = {
-  "소래산": {
-    "산 정상": "bg-sorae-peak.png"
-  },
-  "배봉산": {
-    "크래프트 (영어)": "bg-baebong-craft-english.png"
-  },
-  "수락산": {
-    "산 정상": "bg-surak-peak.png"
-  },
-  "구름산": {
-    "크래프트 (한글)": "bg-gooreum-craft-korean.png"
-  },
-  "미륵산": {
-    "산 정상": "bg-mireuk-peak.png"
-  }
+    "소래산": {
+        "산 정상": "bg-sorae-peak.png"
+    },
+    "배봉산": {
+        "크래프트 (영어)": "bg-baebong-craft-english.png"
+    },
+    "수락산": {
+        "산 정상": "bg-surak-peak.png"
+    },
+    "구름산": {
+        "크래프트 (한글)": "bg-gooreum-craft-korean.png"
+    },
+    "미륵산": {
+        "산 정상": "bg-mireuk-peak.png"
+    }
 };
 const allDesigns = ["산 정상", "크래프트 (영어)", "크래프트 (한글)"];
-
 // ==========================================
 // 2. DOMContentLoaded (초기화 및 UI 이벤트)
 // ==========================================
@@ -845,174 +844,175 @@ if (i === currentSlideIndex) {
 
 // 전체 합병 동영상 다운로드
 async function generateTotalLogVideo() {
- if (!totalDownloadBtn) return;
- const transaction = db.transaction(["videos"], "readonly");
- const store = transaction.objectStore("videos");
- const request = store.getAll();
- request.onsuccess = async function(e) {
- let items = e.target.result || [];
- if (currentProject) {
- items = items.filter(item => item.projectid === currentProject.id);
- }
- if (!items || items.length === 0) {
- alert("아직 저장된 고도필름이 없습니다. 먼저 영상을 촬영해 주세요!");
- return;
- }
- const originalBtnText = totalDownloadBtn.innerHTML;
- totalDownloadBtn.innerText = "🎞️ 고도필름 제작 중...";
- totalDownloadBtn.disabled = true;
- try {
- const canvas = document.createElement('canvas');
- canvas.width = 1080;
- canvas.height = 1920;
- const ctx = canvas.getContext('2d');
- const canvasStream = canvas.captureStream(30);
- const mimeType = getSupportedMimeType();
- const options = mimeType ? { mimeType } : {};
- const canvasRecorder = new MediaRecorder(canvasStream, options);
- const chunks = [];
- canvasRecorder.ondataavailable = (ev) => {
- if (ev.data.size > 0) chunks.push(ev.data);
- };
- canvasRecorder.onstop = () => {
- const resultBlob = new Blob(chunks, { type: canvasRecorder.mimeType || 'video/mp4' });
- const downloadUrl = URL.createObjectURL(resultBlob);
-const now = new Date();
-const year = now.getFullYear();
-const month = now.getMonth() + 1; // 1월은 0으로 시작하므로 +1
-const day = now.getDate();
-const fileName = `${year}년 ${month}월 ${day}일의 고도필름.mp4`;
-
-const a = document.createElement('a');
-a.href = downloadUrl;
-a.download = fileName; // 변경 완료!
-document.body.appendChild(a); 
- a.click();
- document.body.removeChild(a);
- URL.revokeObjectURL(downloadUrl);
- totalDownloadBtn.innerHTML = originalBtnText;
- totalDownloadBtn.disabled = false;
- };
- canvasRecorder.start();
-const bgImg = new Image(); // 변수명을 bgImg로 통일
-let logBgUrl = "my-background.png";
-
-if (currentProject && availableDesigns[currentProject.mountain] && availableDesigns[currentProject.mountain][currentProject.design]) {
-    logBgUrl = availableDesigns[currentProject.mountain][currentProject.design];
-}
-bgImg.src = logBgUrl;
-await new Promise((resolve) => {
-    bgImg.onload = resolve;
-    bgImg.onerror = resolve;
-});
-
-// 🔥 [수정] 변수명을 bgImg로 완벽히 통일한 Crop 좌표 계산
-let bgSx = 0, bgSy = 0, bgSw = bgImg.naturalWidth, bgSh = bgImg.naturalHeight;
-if (bgImg.complete && bgImg.naturalWidth !== 0) {
-    const canvasRatio = canvas.width / canvas.height; // 1080 / 1920 = 0.5625
-    const imgRatio = bgImg.naturalWidth / bgImg.naturalHeight;
-
-    if (imgRatio > canvasRatio) {
-        // 이미지가 캔버스 비율보다 가로로 더 넓은 경우 (좌우를 잘라냄)
-        bgSw = bgImg.naturalHeight * canvasRatio;
-        bgSx = (bgImg.naturalWidth - bgSw) / 2;
-    } else {
-        // 이미지가 캔버스 비율보다 세로로 더 긴 경우 (위아래를 잘라냄 - 현재 케이스)
-        bgSh = bgImg.naturalWidth / canvasRatio;
-        bgSy = (bgImg.naturalHeight - bgSh) / 2;
-    }
-}
-
-for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    const hiddenVideo = document.createElement('video');
-    hiddenVideo.src = URL.createObjectURL(item.videoBlob);
-    hiddenVideo.muted = true;
-    hiddenVideo.playsInline = true;
-    
-    await new Promise((resolve) => {
-        hiddenVideo.onloadeddata = resolve;
-    });
-    await hiddenVideo.play();
-    
-    const containerWidth = 960;
-    const containerHeight = 540;
-    const videoX = (canvas.width - containerWidth) / 2;
-    const videoY = (canvas.height - containerHeight) / 2;
-    
-    while (!hiddenVideo.ended && !hiddenVideo.paused) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // 🔥 [수정] 강제로 늘리는 중복 코드를 삭제하고 정상적인 Crop 코드만 유지
-        if (bgImg.complete && bgImg.naturalWidth !== 0) {
-            ctx.drawImage(bgImg, bgSx, bgSy, bgSw, bgSh, 0, 0, canvas.width, canvas.height);
-        } else {
-            ctx.fillStyle = "#1c1c1e";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!totalDownloadBtn) return;
+    const transaction = db.transaction(["videos"], "readonly");
+    const store = transaction.objectStore("videos");
+    const request = store.getAll();
+    request.onsuccess = async function(e) {
+        let items = e.target.result || [];
+        if (currentProject) {
+            items = items.filter(item => item.projectid === currentProject.id);
         }
-        
-        const targetRatio = containerWidth / containerHeight;
-        const videoRatio = hiddenVideo.videoWidth / hiddenVideo.videoHeight;
-        let drawWidth, drawHeight;
-        
-        if (videoRatio > targetRatio) {
-            drawHeight = containerHeight;
-            drawWidth = containerHeight * videoRatio;
-        } else {
-            drawWidth = containerWidth;
-            drawHeight = containerWidth / videoRatio;
+        if (!items || items.length === 0) {
+            alert("아직 저장된 고도필름이 없습니다. \n먼저 영상을 촬영해 주세요!");
+            return;
         }
-        
-        const offsetX = videoX - (drawWidth - containerWidth) / 2;
-        const offsetY = videoY - (drawHeight - containerHeight) / 2;
- 
- ctx.save();
- ctx.beginPath();
- if (ctx.roundRect) {
- ctx.roundRect(videoX, videoY, containerWidth, containerHeight, 20);
- } else {
- ctx.rect(videoX, videoY, containerWidth, containerHeight);
- }
- ctx.clip();
+        const originalBtnText = totalDownloadBtn.innerHTML;
+        totalDownloadBtn.innerText = " 고도필름 제작 중...";
+        totalDownloadBtn.disabled = true;
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1080;
+            canvas.height = 1920;
+            const ctx = canvas.getContext('2d');
+            const canvasStream = canvas.captureStream(30);
+            const mimeType = getSupportedMimeType();
+            const options = mimeType ? { mimeType } : {};
+            const canvasRecorder = new MediaRecorder(canvasStream, options);
+            const chunks = [];
+            
+            canvasRecorder.ondataavailable = (ev) => {
+                if (ev.data.size > 0) chunks.push(ev.data);
+            };
+            
+            canvasRecorder.onstop = () => {
+                const resultBlob = new Blob(chunks, { type: canvasRecorder.mimeType || 'video/mp4' });
+                const downloadUrl = URL.createObjectURL(resultBlob);
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth() + 1; // 1월은 0으로 시작하므로 +1
+                const day = now.getDate();
+                const fileName = `${year}년 ${month}월 ${day}일의 고도필름.mp4`;
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(downloadUrl);
+                totalDownloadBtn.innerHTML = originalBtnText;
+                totalDownloadBtn.disabled = false;
+            };
+            
+            canvasRecorder.start();
+            
+            // 변수명을 명확한 bgImg로 변경하여 진행
+            const bgImg = new Image(); 
+            let logBgUrl = "my-background.png";
+            if (currentProject && availableDesigns[currentProject.mountain] && availableDesigns[currentProject.mountain][currentProject.design]) {
+                logBgUrl = availableDesigns[currentProject.mountain][currentProject.design];
+            }
+            bgImg.src = logBgUrl;
+            await new Promise((resolve) => {
+                bgImg.onload = resolve;
+                bgImg.onerror = resolve;
+            });
 
- // ✅ [핵심 추가] 전면 카메라 촬영본일 경우, 캔버스에 그릴 때 비디오 영역만 좌우 반전
- if ((item.facingMode || "user") === "user") {
- ctx.translate(videoX + containerWidth / 2, 0);
- ctx.scale(-1, 1);
- ctx.translate(-(videoX + containerWidth / 2), 0);
- }
+            // Crop 좌표 계산 (기호 누락 오류 수정)
+            let bgSx = 0, bgSy = 0, bgSw = bgImg.naturalWidth, bgSh = bgImg.naturalHeight;
+            if (bgImg.complete && bgImg.naturalWidth !== 0) {
+                const canvasRatio = canvas.width / canvas.height; // 1080/1920 = 0.5625
+                const imgRatio = bgImg.naturalWidth / bgImg.naturalHeight;
+                if (imgRatio > canvasRatio) {
+                    // 이미지가 캔버스 비율보다 가로로 더 넓은 경우 (좌우를 잘라냄)
+                    bgSw = bgImg.naturalHeight * canvasRatio;
+                    bgSx = (bgImg.naturalWidth - bgSw) / 2;
+                } else {
+                    // 이미지가 캔버스 비율보다 세로로 더 긴 경우 (위아래를 잘라냄)
+                    bgSh = bgImg.naturalWidth / canvasRatio;
+                    bgSy = (bgImg.naturalHeight - bgSh) / 2;
+                }
+            }
 
- ctx.drawImage(hiddenVideo, offsetX, offsetY, drawWidth, drawHeight);
- ctx.restore();
- 
- ctx.fillStyle = "white";
- ctx.font = "600 41px -apple-system, sans-serif";
- ctx.textAlign = "left";
- ctx.textBaseline = "top";
- ctx.fillText(item.recordTime || "00:00", videoX + 18, videoY + 18);
- ctx.font = "bold 46px -apple-system, sans-serif";
- ctx.textBaseline = "middle";
- const cleanText = (item.altitudeText || "해발 0m").trim();
- const totalContentWidth = 31 + 9 + ctx.measureText(cleanText).width;
- const startX = (canvas.width - totalContentWidth) / 2;
- ctx.fillText(cleanText, startX + 40, videoY + (containerHeight / 2));
- await new Promise(requestAnimationFrame);
- }
-        URL.revokeObjectURL(hiddenVideo.src);
-        hiddenVideo.remove();
-    }
-    
-    // 마지막 영상이 끝난 후 프레임이 온전히 기록되도록 0.3초(300ms) 여유를 줍니다.
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    canvasRecorder.stop();
-} catch (err) {
-    console.error("전체 영상 생성 에러:", err);
- alert("동영상 생성을 실패했습니다.");
- totalDownloadBtn.innerHTML = originalBtnText;
- totalDownloadBtn.disabled = false;
- }
- };
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const hiddenVideo = document.createElement('video');
+                hiddenVideo.src = URL.createObjectURL(item.videoBlob);
+                hiddenVideo.muted = true;
+                hiddenVideo.playsInline = true;
+                
+                await new Promise((resolve) => {
+                    hiddenVideo.onloadeddata = resolve;
+                });
+                await hiddenVideo.play();
+                
+                const containerWidth = 960;
+                const containerHeight = 540;
+                const videoX = (canvas.width - containerWidth) / 2;
+                const videoY = (canvas.height - containerHeight) / 2; // 마이너스 기호 복구
+                
+                while (!hiddenVideo.ended && !hiddenVideo.paused) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    // 배경 크롭하여 꽉 차게 그리기
+                    if (bgImg.complete && bgImg.naturalWidth !== 0) {
+                        ctx.drawImage(bgImg, bgSx, bgSy, bgSw, bgSh, 0, 0, canvas.width, canvas.height);
+                    } else {
+                        ctx.fillStyle = "#1c1c1e";
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    }
+                    
+                    const targetRatio = containerWidth / containerHeight;
+                    const videoRatio = hiddenVideo.videoWidth / hiddenVideo.videoHeight;
+                    let drawWidth, drawHeight;
+                    
+                    if (videoRatio > targetRatio) {
+                        drawHeight = containerHeight;
+                        drawWidth = containerHeight * videoRatio;
+                    } else {
+                        drawWidth = containerWidth;
+                        drawHeight = containerWidth / videoRatio;
+                    }
+                    
+                    // 수식 기호 복구
+                    const offsetX = videoX - (drawWidth - containerWidth) / 2;
+                    const offsetY = videoY - (drawHeight - containerHeight) / 2;
+                    
+                    ctx.save();
+                    ctx.beginPath();
+                    if (ctx.roundRect) {
+                        ctx.roundRect(videoX, videoY, containerWidth, containerHeight, 20);
+                    } else {
+                        ctx.rect(videoX, videoY, containerWidth, containerHeight); // videoY 대소문자 오타 수정
+                    }
+                    ctx.clip();
+                    
+                    if ((item.facingMode || "user") === "user") {
+                        ctx.translate(videoX + containerWidth / 2, 0);
+                        ctx.scale(-1, 1);
+                        ctx.translate(-(videoX + containerWidth / 2), 0);
+                    }
+                    ctx.drawImage(hiddenVideo, offsetX, offsetY, drawWidth, drawHeight);
+                    ctx.restore();
+                    
+                    ctx.fillStyle = "white";
+                    ctx.font = "600 41px -apple-system, sans-serif";
+                    ctx.textAlign = "left";
+                    ctx.textBaseline = "top";
+                    ctx.fillText(item.recordTime || "00:00", videoX + 18, videoY + 18);
+                    
+                    ctx.font = "bold 46px -apple-system, sans-serif";
+                    ctx.textBaseline = "middle";
+                    const cleanText = (item.altitudeText || "해발 0m").trim();
+                    const totalContentWidth = 31 + 9 + ctx.measureText(cleanText).width;
+                    const startX = (canvas.width - totalContentWidth) / 2;
+                    ctx.fillText(cleanText, startX + 40, videoY + (containerHeight / 2));
+                    
+                    await new Promise(requestAnimationFrame);
+                }
+                URL.revokeObjectURL(hiddenVideo.src);
+                hiddenVideo.remove();
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 300));
+            canvasRecorder.stop();
+        } catch (err) {
+            console.error("전체 영상 생성 에러:", err);
+            alert("동영상 생성을 실패했습니다.");
+            totalDownloadBtn.innerHTML = originalBtnText;
+            totalDownloadBtn.disabled = false;
+        }
+    };
 }
 
 if (totalDownloadBtn) {
