@@ -881,7 +881,7 @@ const now = new Date();
 const year = now.getFullYear();
 const month = now.getMonth() + 1; // 1월은 0으로 시작하므로 +1
 const day = now.getDate();
-const fileName = `${year}년 ${month}월 ${day}일, 세상이 얼마나 아름다웠는지!.mp4`;
+const fileName = `${year}년 ${month}월 ${day}일의 고도필름.mp4`;
 
 const a = document.createElement('a');
 a.href = downloadUrl;
