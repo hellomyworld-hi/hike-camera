@@ -3,14 +3,17 @@
   padding: 0;
   box-sizing: border-box;
 }
+
 body, html {
   width: 100%;
   height: 100%;
   background: transparent !important;
   display: flex;
   justify-content: center;
-  font-family: sans-serif;
+  /* 깔끔하고 부드러운 최신 웹 폰트 스타일 적용 */
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Noto Sans KR', sans-serif;
 }
+
 /* 앱을 감싸는 기본 컨테이너 틀 */
 .background-container {
   width: 100%;
@@ -24,16 +27,19 @@ body, html {
   position: relative;
   z-index: 1;
 }
+
 /* 홈화면 모드일 때 전체 배경화면 처리 */
 .background-container.home-mode {
   background-image: url('home-background.png') !important;
   background-size: cover;
 }
+
 /* 촬영 모드일 때 전체 배경화면 처리 */
 .background-container:not(.home-mode) {
   background-image: url('my-background.png');
   background-size: contain;
 }
+
 /* 홈 화면과 촬영 화면 페이지를 분리하여 얹어두기 위한 공통 뷰 스타일 */
 .main-view {
   width: 100%;
@@ -45,17 +51,20 @@ body, html {
   flex-direction: column;
   z-index: 5;
 }
+
 /* 초기화면 전용 패딩 및 스크롤 설정 */
 #home-view {
   padding: 30px 24px;
   overflow-y: auto;
 }
+
 /* 촬영 화면 전용 정렬 */
 #camera-page-view {
   display: flex;
   justify-content: center;
   align-items: center;
 }
+
 .app-container {
   width: 85%;
   position: relative;
@@ -63,6 +72,7 @@ body, html {
   flex-direction: column;
   z-index: 2;
 }
+
 .phone-screen {
   width: 100%;
   aspect-ratio: 16/9;
@@ -72,12 +82,14 @@ body, html {
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   background: #000;
 }
+
 .slider-wrapper {
   display: flex;
   width: 100%;
   height: 100%;
   transition: transform 0.3s ease-out;
 }
+
 /* 배율 확대 시 옆 슬라이드 화면을 침범하지 않도록 완벽 차단 */
 .slide-page {
   flex: 0 0 100%;
@@ -86,12 +98,14 @@ body, html {
   position: relative;
   overflow: hidden !important;
 }
+
 #camera-view, .saved-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform 0.2s ease-out;
 }
+
 .altitude-overlay {
   position: absolute;
   top: 50%;
@@ -103,9 +117,10 @@ body, html {
   white-space: nowrap;
   z-index: 10;
   display: flex;
-  align-items: center;
+  align-items: center;  
   gap: 4px;
 }
+
 #record-btn {
   position: absolute;
   bottom: 12px;
@@ -122,6 +137,7 @@ body, html {
   cursor: pointer;
   z-index: 20;
 }
+
 #switch-camera-btn {
   position: absolute;
   bottom: 12px;
@@ -139,10 +155,12 @@ body, html {
   align-items: center;
   justify-content: center;
 }
+
 #switch-camera-btn svg {
   width: 100%;
   height: 100%;
 }
+
 .timer-container {
   position: absolute;
   bottom: 54px;
@@ -150,7 +168,8 @@ body, html {
   display: flex;
   align-items: center;
   z-index: 20;
-}
+} 
+
 .zoom-container {
   position: absolute;
   bottom: 96px;
@@ -159,6 +178,7 @@ body, html {
   align-items: center;
   z-index: 20;
 }
+
 .timer-menu, .zoom-menu {
   max-width: 0;
   opacity: 0;
@@ -177,6 +197,7 @@ body, html {
   pointer-events: none;
   transition: max-width 0.3s ease-out, opacity 0.2s ease-out, padding 0.3s ease-out, margin-right 0.3s ease-out;
 }
+
 .timer-menu.open, .zoom-menu.open {
   width: max-content !important;
   max-width: 160px;
@@ -185,10 +206,12 @@ body, html {
   margin-right: 6px;
   pointer-events: auto;
 }
+
 .zoom-option-btn.hide-option,
 .timer-option-btn.hide-option {
   display: none !important;
 }
+
 .timer-option-btn, .zoom-option-btn {
   background: transparent;
   border: none;
@@ -199,9 +222,11 @@ body, html {
   padding: 2px 4px;
   transition: color 0.2s;
 }
+
 .timer-option-btn:hover, .zoom-option-btn:hover {
   color: white;
 }
+
 #timer-btn, #zoom-btn {
   width: 36px;
   height: 36px;
@@ -214,14 +239,17 @@ body, html {
   align-items: center;
   justify-content: center;
 }
+
 #timer-btn svg {
   width: 65%;
   height: 65%;
 }
+
 #zoom-btn-text {
   font-size: 11px;
   font-weight: bold;
 }
+
 .delete-btn {
   position: absolute;
   bottom: 12px;
@@ -239,16 +267,16 @@ body, html {
   align-items: center;
   justify-content: center;
 }
+
 .delete-btn svg {
   width: 100%;
   height: 100%;
 }
-/* [최종 수정] 촬영 박스 위치는 고정하고, 다운로드 버튼만 아래로 내리기 */
+
 #total-download-btn {
-  position: absolute;      /* 다시 absolute로 변경하여 촬영 박스 위치에 영향을 주지 않음 */
-  bottom: -35px;           /* 촬영 박스(phone-screen) 하단 테두리 기준으로 아래로 35px 내림 */
-  right: 0;                /* 우측 정렬 */
-  
+  position: absolute;
+  bottom: -35px;
+  right: 0; 
   display: flex;
   align-items: center;
   justify-content: center;
@@ -275,6 +303,7 @@ body, html {
   stroke: white;
   fill: none;
 }
+
 .swipe-guide {
   position: absolute;
   bottom: 12px;
@@ -283,20 +312,19 @@ body, html {
   font-size: 11px;
   background-color: rgba(0, 0, 0, 0.5);
   pointer-events: none;
-  z-index: 25; /* 비디오(z-index: 10)보다 위로 올림 */
+  z-index: 25;
   padding: 2px 6px;
   border-radius: 4px;
 }
 
-
-body > #total-download-btn,
-body > div[class*="Safari"] #total-download-btn,
+body > #total-download-btn, body > div[class*="Safari"] #total-download-btn,
 #total-download-btn:not(.app-container #total-download-btn) {
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
 .zoom-option-btn.hide-option {
   display: none !important;
 }
@@ -310,19 +338,16 @@ body > div[class*="Safari"] #total-download-btn,
   padding-top: 20px;
   margin-bottom: 80px;
 }
-/* [최종 수정] 프로젝트 카드와 팝업 메뉴 스타일 */
 
-/* 프로젝트 전체 카드 포맷 */
 .project-card {
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  position: relative; /* 자식 요소(팝업)의 기준점 */
+  position: relative;
   transition: transform 0.1s ease;
-  overflow: visible !important; /* [핵심] 팝업이 밖으로 튀어나가게 허용 */
+  overflow: visible !important;
 }
 
-/* 점 세 개 아이콘 */
 .menu-trigger {
   position: absolute;
   top: 8px;
@@ -336,62 +361,48 @@ body > div[class*="Safari"] #total-download-btn,
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  z-index: 50; /* 메뉴 아이콘이 카드 요소보다 위에 */
+  z-index: 50;
   font-size: 14px;
   line-height: 1;
 }
 
-.project-menu-popup{
-    position:absolute;
-    top:35px;
-    right:8px;
-
-    width:170px;
-
-    background:#fff;
-    border-radius:12px;
-
-    box-shadow:0 6px 20px rgba(0,0,0,.2);
-
-    border:1px solid #e5e5e5;
-
-    display:none;
-
-    overflow:hidden;
-
-    z-index:999;
+.project-menu-popup {
+  position: absolute;
+  top: 35px;
+  right: 8px;
+  width: 170px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.2);
+  border: 1px solid #e5e5e5;
+  display: none;
+  overflow: hidden;
+  z-index: 999;
 }
 
-.menu-item{
-
-    display:flex;
-    align-items:center;
-
-    gap:12px;
-
-    padding:13px 16px;
-
-    cursor:pointer;
-
-    font-size:14px;
-
-    white-space:nowrap;
-
-    transition:.2s;
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: .2s;
 }
 
-.menu-item:hover{
-    background:#f5f5f5;
+.menu-item:hover {
+  background: #f5f5f5;
+} 
+
+.menu-icon {
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
-.menu-icon{
-    width:20px;
-    text-align:center;
-    flex-shrink:0;
-}
-
-.menu-text{
-    white-space:nowrap;
+.menu-text {
+  white-space: nowrap;
 }
 
 .menu-item:last-child {
@@ -402,10 +413,10 @@ body > div[class*="Safari"] #total-download-btn,
   background-color: #f0f8ff; 
 }
 
-/* 누르고 있는 동안 살짝 작아지는 효과 */
 .project-card:active {
   transform: scale(0.96);
 }
+
 .mountain-pic-box {
   width: 100%;
   aspect-ratio: 1/1;
@@ -416,38 +427,42 @@ body > div[class*="Safari"] #total-download-btn,
   justify-content: center;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
+
 .mountain-tag {
   color: #87CEEA;
   font-size: 20px;
   font-weight: bold;
 }
+
 .project-info {
   margin-top: 8px;
   padding: 0 4px;
 }
+
 .project-title {
   color: #ffffff;
   font-size: 14px;
   font-weight: 600;
-  white-space: nowrap;
+  white-space: nowrap;  
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: text; /* 텍스트 입력 커서 모양으로 변경 */
- }
+  cursor: text;
+}
 
- /* 사용자가 텍스트를 수정 중일 때의 스타일 */
- .project-title[contenteditable="true"] {
+.project-title[contenteditable="true"] {
   outline: 1px solid rgba(255, 255, 255, 0.5);
   background-color: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
   padding: 0 4px;
- }
+}
+
 .project-date {
   color: rgba(255, 255, 255, 0.7);
   font-size: 11px;
   font-weight: 300;
   margin-top: 2px;
 }
+
 .create-project-btn {
   position: absolute;
   bottom: 45px;
@@ -464,124 +479,175 @@ body > div[class*="Safari"] #total-download-btn,
   box-shadow: 0 6px 20px rgba(0,0,0,0.35);
   transition: transform 0.2s;
 }
+
 .create-project-btn:active {
   transform: translateX(-50%) scale(0.95);
 }
+
 .create-project-btn svg {
   width: 22px;
   height: 22px;
   color: #333;
 }
+
 .create-project-btn span {
   font-size: 14px;
   font-weight: 600;
   color: #333;
-}
+} 
+
+/* ========================================================
+   [여기서부터 모달창 화이트 스킨 & 네이버 디자인 집중 반영]
+   ======================================================== */
 .modal-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.5); /* 어두운 오버레이 딤 처리 */
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 100;
   padding: 20px;
 }
+
 .modal-content {
   width: 90%;
-  background-color: rgba(40, 40, 40, 0.95);
-  border-radius: 16px;
+  background-color: #ffffff; /* [변경] 모달 박스 흰 배경화면 */
+  border-radius: 14px; /* 네이버스토어 옵션창 느낌의 부드러운 라운딩 */
   padding: 24px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); /* 부드럽고 가벼운 그림자 */
   display: flex;
   flex-direction: column;
   gap: 16px;
   position: relative;
+  border: 1px solid #e5e5e5;
 }
+
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: white;
+  color: #222222; /* [변경] 폰트 검은색 */
+  border-bottom: 1px solid #f5f5f5;
+  padding-bottom: 12px;
 }
+
 .modal-header h3 {
   font-size: 16px;
   font-weight: 600;
 }
+
 .modal-close-x {
   background: none;
   border: none;
-  color: #aaa;
+  color: #666666; /* [변경] 검은 글씨에 맞춰 닫기버튼 톤다운 */
   font-size: 24px;
   cursor: pointer;
 }
+
 .modal-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
   position: relative;
-}
+} 
+
 .modal-field label {
-  color: #ccc;
-  font-size: 12px;
-  font-weight: 500;
+  color: #333333; /* [변경] 네이버 스토어 '옵션 선택' 항목처럼 짙고 선명하게 */
+  font-size: 13px;
+  font-weight: 600;
 }
+
+/* 이름 입력 박스 (약간의 명암감 주기) */
 .modal-input-box {
   width: 100%;
   height: 42px;
-  background-color: #ffffff;
-  border: none;
+  background-color: #fafafa; /* [변경] 은은한 회색 음영을 주어 박스 존재 인식 유도 */
+  border: 1px solid #e2e8f0; /* 테두리선 구축 */
   border-radius: 8px;
   padding: 0 12px;
   font-size: 14px;
-  color: #333;
+  color: #333333;
   outline: none;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05); /* 박스 내부 안쪽 명암 처리 */
+  transition: all 0.2s;
 }
+
+.modal-input-box:focus {
+  background-color: #ffffff;
+  border-color: #87CEEA;
+  box-shadow: 0 0 0 2px rgba(135, 206, 234, 0.2);
+}
+
+/* 산/배경 선택창 기본 (그대로 하얀색 배경 + 네이버 테두리선 + 아래 화살표 구현) */
 .custom-select-trigger {
   width: 100%;
   height: 42px;
-  background-color: #ffffff;
+  background-color: #ffffff; /* [유지] 그대로 하얀색 */
+  border: 1px solid #dcdee3; /* [변경] 네이버스토어 스타일의 회색 라인 구분선 */
   border-radius: 8px;
   padding: 0 12px;
   font-size: 14px;
-  color: #333;
+  color: #333333;
   display: flex;
   align-items: center;
+  justify-content: space-between; /* 화살표 끝 정렬을 위해 추가 */
   cursor: pointer;
   user-select: none;
+  position: relative;
 }
+
+/* 네이버스토어 돋보기/화살표 스타일의 부드러운 아래화살표(∨) 가상 요소 적용 */
+.custom-select-trigger::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid #555555;
+  border-bottom: 1.5px solid #555555;
+  transform: rotate(45deg);
+  margin-right: 4px;
+  margin-top: -3px;
+}
+
+/* 드롭다운 팝업창 디자인 수정 */
 .custom-options-popup {
   display: none;
   position: absolute;
-  top: 66px;
+  top: 68px;
   left: 0;
   width: 100%;
   background-color: #ffffff;
   border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  border: 1px solid #dcdee3;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
   z-index: 110;
   max-height: 150px;
   overflow-y: auto;
 }
+
 .custom-options-popup.show {
   display: block;
 }
+
 .option-item {
-  padding: 10px 12px;
+  padding: 10px 12px;  
   font-size: 13px;
-  color: #333;
+  color: #333333;
   cursor: pointer;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #f5f5f5; /* 네이버와 동일한 구분선 */
 }
+
 .option-item:last-child {
   border-bottom: none;
 }
+
 .option-item:hover {
-  background-color: #f0f8ff;
+  background-color: #f4f6fa; /* 호버 시 차분한 회색조 선택효과 */
 }
+
 .modal-submit-btn {
   width: 100%;
   height: 46px;
@@ -595,15 +661,15 @@ body > div[class*="Safari"] #total-download-btn,
   margin-top: 10px;
   box-shadow: 0 4px 10px rgba(135,206,234, 0.3);
 }
+
 .modal-submit-btn:active {
   transform: scale(0.98);
 }
-/* [최종 보완] 촬영 박스를 완전히 탈출하여 배경 화면 맨 위꼭대기로 이동 */
+
 #back-to-home-btn {
   position: absolute;
-  top: -300px;              /* [핵심] 음수(-) 값을 크게 주어 촬영 박스 경계선을 완전히 뚫고 위로 올림 */
-  left: 0;                 /* X축은 촬영 박스 왼쪽 라인에 딱 맞춰 그대로 유지 */
-  
+  top: -300px;
+  left: 0; 
   width: 40px;
   height: 40px;
   background-color: rgba(0, 0, 0, 0.5);
@@ -616,7 +682,7 @@ body > div[class*="Safari"] #total-download-btn,
   cursor: pointer;
   z-index: 99;
   transition: background-color 0.2s ease;
-}
+} 
 
 #back-to-home-btn:hover {
   background-color: rgba(0, 0, 0, 0.8);
@@ -627,11 +693,10 @@ body > div[class*="Safari"] #total-download-btn,
   height: 20px;
 }
 
-/* 비활성화된 디자인 옵션 (준비중) 스타일 */
 .option-item.disabled {
-  opacity: 0.45;               /* 색상을 연하게 조절 */
-  color: #888888;              /* 글씨 색상 흐리게 */
-  background-color: #f5f5f5;   /* 배경색 어둡게 */
-  cursor: not-allowed;         /* 클릭 불가 마우스 커서 표시 */
-  pointer-events: none;        /* 클릭 이벤트 완전 차단 */
+  opacity: 0.45;
+  color: #888888;
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
