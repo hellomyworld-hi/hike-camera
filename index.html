@@ -40,15 +40,15 @@
     <div id="home-view" class="main-view">
   <!-- 1. 빈 화면 영역 (프로젝트가 없을 때 표시) -->
   <div id="empty-state" class="empty-state">
-    <div class="empty-icon-wrapper">
-      <!-- 산 선 그림 SVG 이모티콘 (#FBF4E9 적용) -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="#FBF4E9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M8 3l4 8 5-5 5 15H2L8 3z"/>
-      </svg>
-    </div>
-    <h2 class="empty-title">아직 프로젝트가 없어요</h2>
-    <p class="empty-subtitle">첫 고도 필름을 만들어 보세요.</p>
-  </div>
+    <!-- 프로젝트가 없을 때 뜨는 안내 영역 예시 -->
+<div class="empty-project-message">
+  <!-- 1번: 기존 산 그림을 ⛰️ 이모지로 교체 -->
+  <div class="empty-mountain-icon">⛰️</div>
+  
+  <!-- 2번, 3번, 4번 조건이 적용되는 텍스트 영역 -->
+  <div class="empty-title">아직 프로젝트가 없어요</div>
+  <div class="empty-subtitle">첫 고도 필름을 만들어 보세요.</div>
+</div>
 
   <!-- 기존 프로젝트 목록 그리드 -->
   <div class="project-grid"></div>
