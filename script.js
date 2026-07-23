@@ -37,7 +37,6 @@ const availableDesigns = {
     "구름산": { "크래프트 (한글)": "bg-gooreum-craft-korean.png" },
     "미륵산": { "산 정상": "bg-mireuk-peak.png" }
 };
-const allDesigns = ["산 정상", "크래프트 (영어)", "크래프트 (한글)"];
 
 // ==========================================
 // 2. DOMContentLoaded (초기화 및 UI 이벤트)
@@ -50,7 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const mountainOptions = document.getElementById("mountain-options");
   const designTrigger = document.getElementById("design-trigger");
   const designOptions = document.getElementById("design-options");
-    const selectedMountainText = document.getElementById("selected-mountain-text");
+  const selectedMountainText = document.getElementById("selected-mountain-text");
   const selectedDesignText = document.getElementById("selected-design-text");
   const createProjectSubmitBtn = document.getElementById("create-project-submit-btn");
   const projectNameInput = document.getElementById("project-name-input");
@@ -62,6 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let projects = JSON.parse(localStorage.getItem("climbingProjects")) || [];
 
+  // 프로젝트 목록 리렌더링 함수
   function renderProjects() {
     if (!projectGrid) return;
     projectGrid.innerHTML = "";
@@ -197,7 +197,6 @@ document.addEventListener("DOMContentLoaded", () => {
           startEditing();
         });
 
-        // ✨ 프로젝트 완전 삭제 로직 (찌꺼기 비디오까지 싹 제거)
         deleteItem.addEventListener("click", async (e) => {
           e.stopPropagation();
           if (confirm("프로젝트를 삭제하시겠습니까? \n관련 영상도 모두 완전히 삭제됩니다.")) {
@@ -250,7 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
     openModalBtn.addEventListener("click", () => {
       if (projectModal) {
         projectModal.style.display = "flex";
-        projectModal.classList.add("show"); // ★ 아래에서 올라오는 애니메이션 활성화
+        projectModal.classList.add("show");
       }
     });
   }
@@ -259,7 +258,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (closeModalBtn) {
     closeModalBtn.addEventListener("click", () => {
       if (projectModal) {
-        projectModal.classList.remove("show"); // ★ 애니메이션 상태 제거
+        projectModal.classList.remove("show");
         projectModal.style.display = "none";
       }
       if (mountainOptions) mountainOptions.classList.remove("show");
@@ -267,7 +266,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 3) ★ [추가] 모달 창 바깥의 어두운 배경을 눌렀을 때도 부드럽게 닫히도록 처리
+  // 3) 모달 바깥 어두운 배경 클릭 시 닫기
   if (projectModal) {
     projectModal.addEventListener("click", (e) => {
       if (e.target === projectModal) {
@@ -279,6 +278,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // 4) 카메라 상단 뒤로가기 버튼
   if (backToHomeBtn) {
     backToHomeBtn.addEventListener("click", () => {
       if (cameraView && cameraView.srcObject) {
@@ -296,75 +296,68 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if (mountainTrigger) {
+  // 5) 산 선택 카드 클릭 & 항목 선택
+  if (mountainTrigger && mountainOptions) {
     mountainTrigger.addEventListener("click", (e) => {
       e.stopPropagation();
       if (designOptions) designOptions.classList.remove("show");
-      if (mountainOptions) mountainOptions.classList.toggle("show");
+      mountainOptions.classList.toggle("show");
     });
-  }
 
-  if (designTrigger) {
-    designTrigger.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (mountainOptions) mountainOptions.classList.remove("show");
-      if (designOptions) designOptions.classList.toggle("show");
-    });
-  }
-
-  function updateDesignOptions(selectedMountain) {
-    if (!designOptions) return;
-    designOptions.innerHTML = "";
-    allDesigns.forEach(design => {
-      const item = document.createElement("div");
-      item.className = "option-item";
-      const isAvailable = availableDesigns[selectedMountain] && availableDesigns[selectedMountain][design];
-      if (isAvailable) {
-        item.innerText = design;
-        item.setAttribute("data-value", design);
-        item.addEventListener("click", (e) => {
-          e.stopPropagation();
-          designTrigger.innerText = design;
-          designOptions.classList.remove("show");
-        });
-      } else {
-        item.innerText = `${design} (준비중)`;
-        item.classList.add("disabled");
-      }
-      designOptions.appendChild(item);
-    });
-  }
-
-  if (mountainOptions) {
-    mountainOptions.querySelectorAll(".option-item").forEach(item => {
+    mountainOptions.querySelectorAll(".option-item").forEach((item) => {
       item.addEventListener("click", (e) => {
         e.stopPropagation();
-        const selectedMountain = item.getAttribute("data-value");
-        mountainTrigger.innerText = selectedMountain;
+        const value = item.getAttribute("data-value") || item.textContent;
+        if (selectedMountainText) {
+          selectedMountainText.innerText = value;
+          selectedMountainText.style.color = "#283030";
+        }
         mountainOptions.classList.remove("show");
-        designTrigger.innerText = "배경 선택하기";
-        updateDesignOptions(selectedMountain);
       });
     });
   }
 
-  document.addEventListener("click", () => {
-    if (mountainOptions) mountainOptions.classList.remove("show");
-    if (designOptions) designOptions.classList.remove("show");
+  // 6) 디자인 선택 카드 클릭 & 항목 선택
+  if (designTrigger && designOptions) {
+    designTrigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (mountainOptions) mountainOptions.classList.remove("show");
+      designOptions.classList.toggle("show");
+    });
+
+    designOptions.querySelectorAll(".option-item").forEach((item) => {
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const value = item.getAttribute("data-value") || item.textContent;
+        if (selectedDesignText) {
+          selectedDesignText.innerText = value;
+          selectedDesignText.style.color = "#283030";
+        }
+        designOptions.classList.remove("show");
+      });
+    });
+  }
+
+  // 7) 바깥 클릭시 드롭다운 및 메뉴 팝업 닫기
+  document.addEventListener("click", (e) => {
+    if (mountainOptions && mountainTrigger && !mountainTrigger.contains(e.target)) {
+      mountainOptions.classList.remove("show");
+    }
+    if (designOptions && designTrigger && !designTrigger.contains(e.target)) {
+      designOptions.classList.remove("show");
+    }
     document.querySelectorAll(".project-menu-popup").forEach(menu => {
       menu.style.display = "none";
     });
   });
 
+  // 8) 프로젝트 생성 제출
   if (createProjectSubmitBtn) {
     createProjectSubmitBtn.addEventListener("click", () => {
       const name = projectNameInput ? projectNameInput.value.trim() : "";
-      
-      // ★ 변경: 셀렉트 카드 내부의 텍스트 태그 값을 읽어옵니다.
       const mountain = selectedMountainText ? selectedMountainText.innerText.trim() : "";
       const design = selectedDesignText ? selectedDesignText.innerText.trim() : "";
 
-      // ★ 변경: 새 HTML의 기본 안내 문구와 비교하여 예외 처리
       if (!name) { alert("프로젝트 이름을 입력해주세요!"); return; }
       if (mountain === "등산할 산을 선택해주세요" || !mountain) { alert("등산하실 산을 선택해주세요!"); return; }
       if (design === "영상에 적용할 디자인을 선택해주세요" || !design) { alert("배경 디자인을 선택해주세요!"); return; }
@@ -383,19 +376,17 @@ document.addEventListener("DOMContentLoaded", () => {
       projects.push(newProject);
       localStorage.setItem("climbingProjects", JSON.stringify(projects));
 
-      // 입력 데이터 및 선택 문구 초기화
       if (projectNameInput) projectNameInput.value = "";
       
       if (selectedMountainText) {
         selectedMountainText.innerText = "등산할 산을 선택해주세요";
-        selectedMountainText.style.color = "#888888"; // 기본 회색 톤으로 복원
+        selectedMountainText.style.color = "#888888";
       }
       if (selectedDesignText) {
         selectedDesignText.innerText = "영상에 적용할 디자인을 선택해주세요";
         selectedDesignText.style.color = "#888888";
       }
 
-      // ★ 변경: 모달 애니메이션 클래스 제거 후 숨기기
       if (projectModal) {
         projectModal.classList.remove("show");
         projectModal.style.display = "none";
@@ -406,60 +397,6 @@ document.addEventListener("DOMContentLoaded", () => {
       renderProjects();
     });
   }
-
-    // ==========================================
-  // [추가] 산 / 디자인 카드 클릭 시 드롭다운 열기 및 항목 선택 처리
-  // ==========================================
-
-  // 1) 산 선택 카드 클릭 및 목록 항목 선택
-  if (mountainTrigger && mountainOptions) {
-    mountainTrigger.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (designOptions) designOptions.classList.remove("show"); // 다른 팝업은 닫기
-      mountainOptions.classList.toggle("show");
-    });
-
-    mountainOptions.querySelectorAll(".option-item").forEach((item) => {
-      item.addEventListener("click", () => {
-        const value = item.getAttribute("data-value") || item.textContent;
-        if (selectedMountainText) {
-          selectedMountainText.innerText = value;
-          selectedMountainText.style.color = "#283030"; // 선택 시 진한 색상 적용
-        }
-        mountainOptions.classList.remove("show");
-      });
-    });
-  }
-
-  // 2) 디자인 선택 카드 클릭 및 목록 항목 선택
-  if (designTrigger && designOptions) {
-    designTrigger.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (mountainOptions) mountainOptions.classList.remove("show"); // 다른 팝업은 닫기
-      designOptions.classList.toggle("show");
-    });
-
-    designOptions.querySelectorAll(".option-item").forEach((item) => {
-      item.addEventListener("click", () => {
-        const value = item.getAttribute("data-value") || item.textContent;
-        if (selectedDesignText) {
-          selectedDesignText.innerText = value;
-          selectedDesignText.style.color = "#283030"; // 선택 시 진한 색상 적용
-        }
-        designOptions.classList.remove("show");
-      });
-    });
-  }
-
-  // 3) 카드가 아닌 바깥 영역을 터치했을 때 옵션 목록 닫기
-  document.addEventListener("click", (e) => {
-    if (mountainOptions && !mountainTrigger.contains(e.target)) {
-      mountainOptions.classList.remove("show");
-    }
-    if (designOptions && !designTrigger.contains(e.target)) {
-      designOptions.classList.remove("show");
-    }
-  });
 
   renderProjects();
 });
@@ -609,7 +546,6 @@ function deleteVideoFromDB(id) {
   });
 }
 
-// ✨ 프로젝트(방) 삭제 시 관련 영상을 DB에서 일괄 제거하는 클리닝 함수
 function deleteProjectVideos(projectId) {
   return new Promise((resolve) => {
     if (!db) { resolve(); return; }
@@ -985,7 +921,6 @@ async function generateTotalLogVideo() {
     totalDownloadBtn.innerText = "고도필름 제작 시작...";
     totalDownloadBtn.disabled = true;
 
-    // 🌟 멋진 프리뷰 오버레이 화면 생성 (유지)
     const renderOverlay = document.createElement('div');
     renderOverlay.id = 'render-blur-overlay';
     renderOverlay.style.cssText = `
@@ -1002,12 +937,10 @@ async function generateTotalLogVideo() {
 
     try {
       const canvas = document.createElement('canvas');
-      // 배경지 원본 해상도
       canvas.width = 1290;
       canvas.height = 2622;
       const ctx = canvas.getContext('2d');
       
-      // 프리뷰 캔버스 (화면용)
       canvas.style.cssText = "width: 210px; height: 427px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); background: #1c1c1e;";
       renderOverlay.appendChild(canvas);
       document.body.appendChild(renderOverlay);
@@ -1072,7 +1005,6 @@ async function generateTotalLogVideo() {
       hiddenVideo.style.cssText = "position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none;";
       renderOverlay.appendChild(hiddenVideo);
 
-      // 🎬 비디오 순차 합성 루프 개시
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const videoObjectUrl = URL.createObjectURL(item.videoBlob);
@@ -1084,7 +1016,6 @@ async function generateTotalLogVideo() {
         let isCurrentVideoPlaying = true;
         hiddenVideo.onended = () => { isCurrentVideoPlaying = false; };
 
-        // 🎯 [핵심 수정] 캔버스가 커진 만큼 영상 박스의 너비, 높이도 스케일업! (960x540 -> 1146x645)
         const containerWidth = 1146;
         const containerHeight = 645;
         const videoX = (canvas.width - containerWidth) / 2;
@@ -1118,7 +1049,6 @@ async function generateTotalLogVideo() {
           ctx.save();
           ctx.beginPath();
           if (ctx.roundRect) {
-            // 모서리 둥글기도 20에서 24로 커진 박스에 맞게 자연스럽게 스케일업
             ctx.roundRect(videoX, videoY, containerWidth, containerHeight, 24);
           } else {
             ctx.rect(videoX, videoY, containerWidth, containerHeight);
@@ -1133,7 +1063,6 @@ async function generateTotalLogVideo() {
           ctx.drawImage(hiddenVideo, offsetX, offsetY, drawWidth, drawHeight);
           ctx.restore();
 
-          // 🎯 텍스트 및 여백도 커진 박스 비율에 맞춰 스케일업! (41px -> 49px, 46px -> 55px)
           ctx.fillStyle = "white";
           ctx.font = "600 49px -apple-system, sans-serif";
           ctx.textAlign = "left";
@@ -1147,7 +1076,6 @@ async function generateTotalLogVideo() {
           const startX = (canvas.width - totalContentWidth) / 2;
           ctx.fillText(cleanText, startX + 48, videoY + (containerHeight / 2));
 
-          // 실시간 진행률 계산 및 표기
           const currentProgress = hiddenVideo.duration ? (hiddenVideo.currentTime / hiddenVideo.duration) : 0;
           const percent = Math.min(99, Math.round(((i + currentProgress) / items.length) * 100));
           
