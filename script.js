@@ -50,6 +50,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const mountainOptions = document.getElementById("mountain-options");
   const designTrigger = document.getElementById("design-trigger");
   const designOptions = document.getElementById("design-options");
+    const selectedMountainText = document.getElementById("selected-mountain-text");
+  const selectedDesignText = document.getElementById("selected-design-text");
   const createProjectSubmitBtn = document.getElementById("create-project-submit-btn");
   const projectNameInput = document.getElementById("project-name-input");
   const projectGrid = document.querySelector(".project-grid");
@@ -243,17 +245,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.refreshProjectGrid = renderProjects;
 
+  // 1) 새 프로젝트 생성 버튼 클릭 시 모달 열기
   if (openModalBtn) {
     openModalBtn.addEventListener("click", () => {
-      if (projectModal) projectModal.style.display = "flex";
+      if (projectModal) {
+        projectModal.style.display = "flex";
+        projectModal.classList.add("show"); // ★ 아래에서 올라오는 애니메이션 활성화
+      }
     });
   }
 
+  // 2) 닫기(X) 버튼 클릭 시 모달 닫기
   if (closeModalBtn) {
     closeModalBtn.addEventListener("click", () => {
-      if (projectModal) projectModal.style.display = "none";
+      if (projectModal) {
+        projectModal.classList.remove("show"); // ★ 애니메이션 상태 제거
+        projectModal.style.display = "none";
+      }
       if (mountainOptions) mountainOptions.classList.remove("show");
       if (designOptions) designOptions.classList.remove("show");
+    });
+  }
+
+  // 3) ★ [추가] 모달 창 바깥의 어두운 배경을 눌렀을 때도 부드럽게 닫히도록 처리
+  if (projectModal) {
+    projectModal.addEventListener("click", (e) => {
+      if (e.target === projectModal) {
+        projectModal.classList.remove("show");
+        projectModal.style.display = "none";
+        if (mountainOptions) mountainOptions.classList.remove("show");
+        if (designOptions) designOptions.classList.remove("show");
+      }
     });
   }
 
@@ -337,12 +359,15 @@ document.addEventListener("DOMContentLoaded", () => {
   if (createProjectSubmitBtn) {
     createProjectSubmitBtn.addEventListener("click", () => {
       const name = projectNameInput ? projectNameInput.value.trim() : "";
-      const mountain = mountainTrigger ? mountainTrigger.innerText : "";
-      const design = designTrigger ? designTrigger.innerText : "";
+      
+      // ★ 변경: 셀렉트 카드 내부의 텍스트 태그 값을 읽어옵니다.
+      const mountain = selectedMountainText ? selectedMountainText.innerText.trim() : "";
+      const design = selectedDesignText ? selectedDesignText.innerText.trim() : "";
 
+      // ★ 변경: 새 HTML의 기본 안내 문구와 비교하여 예외 처리
       if (!name) { alert("프로젝트 이름을 입력해주세요!"); return; }
-      if (mountain === "산 선택하기") { alert("등산하실 산을 선택해주세요!"); return; }
-      if (design === "배경 선택하기") { alert("배경 디자인을 선택해주세요!"); return; }
+      if (mountain === "등산할 산을 선택해주세요" || !mountain) { alert("등산하실 산을 선택해주세요!"); return; }
+      if (design === "영상에 적용할 디자인을 선택해주세요" || !design) { alert("배경 디자인을 선택해주세요!"); return; }
 
       const today = new Date();
       const formattedDate = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
@@ -358,13 +383,83 @@ document.addEventListener("DOMContentLoaded", () => {
       projects.push(newProject);
       localStorage.setItem("climbingProjects", JSON.stringify(projects));
 
+      // 입력 데이터 및 선택 문구 초기화
       if (projectNameInput) projectNameInput.value = "";
-      if (mountainTrigger) mountainTrigger.innerText = "산 선택하기";
-      if (designTrigger) designTrigger.innerText = "배경 선택하기";
-      if (projectModal) projectModal.style.display = "none";
+      
+      if (selectedMountainText) {
+        selectedMountainText.innerText = "등산할 산을 선택해주세요";
+        selectedMountainText.style.color = "#888888"; // 기본 회색 톤으로 복원
+      }
+      if (selectedDesignText) {
+        selectedDesignText.innerText = "영상에 적용할 디자인을 선택해주세요";
+        selectedDesignText.style.color = "#888888";
+      }
+
+      // ★ 변경: 모달 애니메이션 클래스 제거 후 숨기기
+      if (projectModal) {
+        projectModal.classList.remove("show");
+        projectModal.style.display = "none";
+      }
+      if (mountainOptions) mountainOptions.classList.remove("show");
+      if (designOptions) designOptions.classList.remove("show");
+
       renderProjects();
     });
   }
+
+    // ==========================================
+  // [추가] 산 / 디자인 카드 클릭 시 드롭다운 열기 및 항목 선택 처리
+  // ==========================================
+
+  // 1) 산 선택 카드 클릭 및 목록 항목 선택
+  if (mountainTrigger && mountainOptions) {
+    mountainTrigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (designOptions) designOptions.classList.remove("show"); // 다른 팝업은 닫기
+      mountainOptions.classList.toggle("show");
+    });
+
+    mountainOptions.querySelectorAll(".option-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        const value = item.getAttribute("data-value") || item.textContent;
+        if (selectedMountainText) {
+          selectedMountainText.innerText = value;
+          selectedMountainText.style.color = "#283030"; // 선택 시 진한 색상 적용
+        }
+        mountainOptions.classList.remove("show");
+      });
+    });
+  }
+
+  // 2) 디자인 선택 카드 클릭 및 목록 항목 선택
+  if (designTrigger && designOptions) {
+    designTrigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (mountainOptions) mountainOptions.classList.remove("show"); // 다른 팝업은 닫기
+      designOptions.classList.toggle("show");
+    });
+
+    designOptions.querySelectorAll(".option-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        const value = item.getAttribute("data-value") || item.textContent;
+        if (selectedDesignText) {
+          selectedDesignText.innerText = value;
+          selectedDesignText.style.color = "#283030"; // 선택 시 진한 색상 적용
+        }
+        designOptions.classList.remove("show");
+      });
+    });
+  }
+
+  // 3) 카드가 아닌 바깥 영역을 터치했을 때 옵션 목록 닫기
+  document.addEventListener("click", (e) => {
+    if (mountainOptions && !mountainTrigger.contains(e.target)) {
+      mountainOptions.classList.remove("show");
+    }
+    if (designOptions && !designTrigger.contains(e.target)) {
+      designOptions.classList.remove("show");
+    }
+  });
 
   renderProjects();
 });
