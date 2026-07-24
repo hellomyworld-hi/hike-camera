@@ -140,7 +140,7 @@ const sheetHandle = projectModal ? projectModal.querySelector('.sheet-drag-zone'
     }
 
     function closeSheetWithAnimation() {
-  bottomSheetContent.style.transition = 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1)'; // ★ 0.28s → 0.38s, easing 변경
+  bottomSheetContent.style.transition = 'transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)'; // ★ 더 길고 부드러운 커브
   bottomSheetContent.style.transform = 'translateY(100%)';
 
   setTimeout(() => {
@@ -148,7 +148,7 @@ const sheetHandle = projectModal ? projectModal.querySelector('.sheet-drag-zone'
     projectModal.style.display = 'none';
     bottomSheetContent.style.transform = '';
     bottomSheetContent.style.transition = '';
-  }, 380); // ★ 위 duration과 맞춰서 280 → 380
+  }, 550); // ★ duration과 동일하게 맞춤
 }
     sheetHandle.addEventListener('touchstart', (e) => {
   onDragStart(e.touches[0].clientY);
@@ -264,6 +264,21 @@ if (cleanSelectedMountain) {
   // 프로젝트 목록 리렌더링
   function renderProjects() {
     if (!projectGrid) return;
+    function renderProjects() {
+  if (!projectGrid) return;
+  projectGrid.innerHTML = "";
+
+  // ★ 추가: 프로젝트 유무에 따라 빈 상태 메시지 토글
+  const emptyState = document.getElementById("empty-state");
+  if (emptyState) {
+    emptyState.style.display = projects.length === 0 ? "flex" : "none";
+  }
+
+  if (!db) {
+    renderCards([]);
+    return;
+  }
+  ...
     projectGrid.innerHTML = "";
 
     if (!db) {
