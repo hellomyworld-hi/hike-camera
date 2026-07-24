@@ -794,30 +794,13 @@ body > #total-download-btn, body > div[class*="Safari"] #total-download-btn,
   background-color: #E2DDD5;
   border-radius: 2px;
   margin: 0 auto 4px auto;
+  cursor: grab;
+  /* 터치 영역을 실제 바보다 넓게 잡아주기 위한 패딩 트릭 */
+  padding: 12px 30px;
+  background-clip: content-box;
+  box-sizing: content-box;
 }
 
-/* 3. 우측 상단 'X' 닫기 버튼 (원형 배경 제거, 깔끔한 X) */
-.sheet-close-btn {
-  position: absolute;
-  top: 24px;
-  right: 20px;
-  background: transparent !important; /* 동그라미 배경 제거 */
-  border: none;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-}
-
-.sheet-close-btn svg {
-  width: 20px;
-  height: 20px;
-  stroke: #2C2C2E;
-  stroke-width: 2.2;
-}
 
 /* 시트 헤더 & 타이틀 */
 .sheet-header {
