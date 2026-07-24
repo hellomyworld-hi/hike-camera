@@ -709,6 +709,7 @@ body > #total-download-btn, body > div[class*="Safari"] #total-download-btn,
   display: flex !important;
 }
 
+/* CSS의 .bottom-sheet-content 부분을 아래처럼 수정/점검해 주세요 */
 .bottom-sheet-content {
   width: 100%;
   max-width: 430px;
@@ -723,7 +724,9 @@ body > #total-download-btn, body > div[class*="Safari"] #total-download-btn,
   flex-direction: column;
   gap: 20px;
   overflow-y: auto;
-  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  
+  /* 애니메이션 키프레임 대신 transform 성능 최적화 옵션 추가 */
+  will-change: transform;
 }
 
 @keyframes slideUp {
