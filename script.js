@@ -17,6 +17,11 @@ const zoomBtnText = document.getElementById('zoom-btn-text');
 const zoomOptionBtns = document.querySelectorAll('.zoom-option-btn');
 const zoom05Btn = document.getElementById('zoom-05-btn');
 
+// 핀치 줌 제스처 차단 (iOS Safari)
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('gesturechange', (e) => e.preventDefault());
+document.addEventListener('gestureend', (e) => e.preventDefault());
+
 let mediaRecorder;
 let recordedChunks = [];
 let currentSlideIndex = 0;
