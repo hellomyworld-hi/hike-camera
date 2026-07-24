@@ -273,14 +273,6 @@ if (cleanSelectedMountain) {
   if (emptyState) {
     emptyState.style.display = projects.length === 0 ? "flex" : "none";
   }
-
-  if (!db) {
-    renderCards([]);
-    return;
-  }
-  ...
-    projectGrid.innerHTML = "";
-
     if (!db) {
       renderCards([]);
       return;
