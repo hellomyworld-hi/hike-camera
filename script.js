@@ -264,15 +264,14 @@ if (cleanSelectedMountain) {
   // 프로젝트 목록 리렌더링
   function renderProjects() {
     if (!projectGrid) return;
-    function renderProjects() {
-  if (!projectGrid) return;
-  projectGrid.innerHTML = "";
+    projectGrid.innerHTML = "";
 
-  // ★ 추가: 프로젝트 유무에 따라 빈 상태 메시지 토글
-  const emptyState = document.getElementById("empty-state");
-  if (emptyState) {
-    emptyState.style.display = projects.length === 0 ? "flex" : "none";
-  }
+    // 프로젝트 유무에 따라 빈 상태 메시지 토글
+    const emptyState = document.getElementById("empty-state");
+    if (emptyState) {
+      emptyState.style.display = projects.length === 0 ? "flex" : "none";
+    }
+
     if (!db) {
       renderCards([]);
       return;
@@ -419,10 +418,10 @@ if (cleanSelectedMountain) {
           loadSavedVideos(currentProject.id);
 
           let bgImageUrl = "my-background.png";
-const foundUrl = findAvailableDesignUrl(proj.mountain, proj.design);
-if (foundUrl) {
-  bgImageUrl = foundUrl;
-}
+          const foundUrl = findAvailableDesignUrl(proj.mountain, proj.design);
+          if (foundUrl) {
+            bgImageUrl = foundUrl;
+          }
 
           if (homeView) homeView.style.display = "none";
           if (cameraPageView) cameraPageView.style.display = "flex";
@@ -442,6 +441,7 @@ if (foundUrl) {
       });
     }
   }
+
 
   window.refreshProjectGrid = renderProjects;
 
