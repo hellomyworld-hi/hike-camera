@@ -747,8 +747,8 @@ body > #total-download-btn, body > div[class*="Safari"] #total-download-btn,
 /* 활성화 시 위치 강제 상향 */
 .bottom-sheet-overlay.show .bottom-sheet-content,
 .bottom-sheet-overlay.active .bottom-sheet-content {
-  transform: translateY(0) !important;
-  -webkit-transform: translateY(0) !important;
+  transform: translateY(0);
+  -webkit-transform: translateY(0);
 }
 
 .sheet-drag-zone {
