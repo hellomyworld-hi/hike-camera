@@ -53,9 +53,11 @@ function normalizeText(text) {
   if (!text) return '';
   return text
     .normalize('NFC')
-    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
+    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '') // 이모지 본체 제거
+    .replace(/[\u{FE00}-\u{FE0F}]/gu, '')   // ← 추가: 변형 선택자(fe0f 등) 제거
+    .replace(/[\u200B-\u200D]/gu, '')        // ← 추가: 폭 없는 문자(zero-width) 제거
     .replace(/\(준비 중\)/g, '')
-    .replace(/[\s()]/g, '')
+    .replace(/\s+/g, '')                     // ← 변경: trim() 대신, 문자열 어디에 있든 모든 공백류(줄바꿈,탭,스페이스) 제거
     .trim();
 }
 
