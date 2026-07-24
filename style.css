@@ -1063,3 +1063,16 @@ body > #total-download-btn, body > div[class*="Safari"] #total-download-btn,
 .modal-content {
   will-change: transform;
 }
+
+.sheet-handle {
+  width: 40px;
+  height: 4px;
+  background-color: #E2DDD5;
+  border-radius: 2px;
+  margin: 0 auto 4px auto;
+  cursor: grab;
+  padding: 12px 30px;
+  background-clip: content-box;
+  box-sizing: content-box;
+  touch-action: none; /* ★ 추가 */
+}
