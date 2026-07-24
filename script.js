@@ -113,11 +113,13 @@ document.addEventListener("DOMContentLoaded", () => {
         cell.classList.remove('disabled');
         cell.style.opacity = '1';
         cell.style.pointerEvents = 'auto';
-        cell.classList.add('active');
+        
+        // 🚨 수정된 부분: 산을 선택했을 때 디자인이 자동으로 active 되지 않게 삭제/주석처리
+        // cell.classList.add('active'); 
       } else {
         cell.innerText = `${baseName} (준비 중)`;
         cell.classList.add('disabled');
-        cell.classList.remove('active');
+        cell.classList.remove('active'); // 비활성화 될 때는 active 해제
         cell.style.opacity = '0.35';
         cell.style.pointerEvents = 'none';
       }
@@ -410,19 +412,26 @@ document.addEventListener("DOMContentLoaded", () => {
     createProjectSubmitBtn.addEventListener("click", () => {
       const name = projectNameInput ? projectNameInput.value.trim() : "";
       
-      const activeCells = document.querySelectorAll('.horizontal-cell-group .select-cell.active');
+      // 🚨 수정된 부분: 텍스트(배열)로 구분하지 않고 요소의 위치(그룹)로 산과 디자인을 명확히 구분
+      const cellGroups = document.querySelectorAll('.horizontal-cell-group');
       let mountain = "";
       let design = "";
 
-      activeCells.forEach(cell => {
-        const text = cell.getAttribute('data-base-name') || cleanEmojiText(cell.innerText);
-        if (["소래산", "배봉산", "수락산", "구름산", "미륵산"].includes(text)) {
-          mountain = text;
-        } else {
-          design = text;
+      if (cellGroups.length >= 2) {
+        // 첫 번째 줄(산 그룹)에서 active 된 셀 가져오기
+        const activeMountain = cellGroups[0].querySelector('.select-cell.active');
+        if (activeMountain) {
+          mountain = activeMountain.getAttribute('data-base-name') || cleanEmojiText(activeMountain.innerText);
         }
-      });
 
+        // 두 번째 줄(디자인 그룹)에서 active 된 셀 가져오기
+        const activeDesign = cellGroups[1].querySelector('.select-cell.active');
+        if (activeDesign) {
+          design = activeDesign.getAttribute('data-base-name') || cleanEmojiText(activeDesign.innerText);
+        }
+      }
+
+      // 검증 로직
       if (!name) { alert("프로젝트 이름을 입력해주세요!"); return; }
       if (!mountain) { alert("등산하실 산을 선택해주세요!"); return; }
       if (!design) { alert("배경 디자인을 선택해주세요!"); return; }
