@@ -795,10 +795,10 @@ body > #total-download-btn, body > div[class*="Safari"] #total-download-btn,
   border-radius: 2px;
   margin: 0 auto 4px auto;
   cursor: grab;
-  /* 터치 영역을 실제 바보다 넓게 잡아주기 위한 패딩 트릭 */
   padding: 12px 30px;
   background-clip: content-box;
   box-sizing: content-box;
+  touch-action: none; /* ★ 추가 */
 }
 
 
@@ -1064,15 +1064,4 @@ body > #total-download-btn, body > div[class*="Safari"] #total-download-btn,
   will-change: transform;
 }
 
-.sheet-handle {
-  width: 40px;
-  height: 4px;
-  background-color: #E2DDD5;
-  border-radius: 2px;
-  margin: 0 auto 4px auto;
-  cursor: grab;
-  padding: 12px 30px;
-  background-clip: content-box;
-  box-sizing: content-box;
-  touch-action: none; /* ★ 추가 */
-}
+
